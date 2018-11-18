@@ -1,0 +1,14 @@
+{
+  "name": "Daftie",
+  "version": "1.0",
+  "description": "Additions for Daft.ie",
+  "manifest_version": 2,
+  "permissions": ["activeTab", "storage"],
+  "content_scripts": [
+    {
+      "matches": ["https://daft.ie/*", "https://*.daft.ie/*"],
+      "css": ["index.css"],
+      "js": ["contentScript.js"]
+    }
+  ]
+}

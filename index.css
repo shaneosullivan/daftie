@@ -1,0 +1,38 @@
+.daftmonkey-controls {
+  padding: 4px;
+  padding-left: 32px;
+
+  text-align: left;
+}
+
+.FeaturedCardPropertyInformation__detailsContainer .daftmonkey-controls {
+  padding-left: 0px;
+  transform: translateY(16px);
+}
+
+.df-price-history {
+  background-color: #fcfae1;
+  display: inline-block;
+  padding: 4px;
+  margin-left: 32px;
+}
+
+.df-price-history-list {
+  text-align: left;
+}
+
+.df-price-history-list td {
+  padding-right: 8px;
+}
+
+.df-price-history-header {
+  font-weight: bold;
+}
+
+.df-button {
+  cursor: pointer;
+}
+
+#pbxl_photo_carousel {
+  transform: scale(1.7) translateY(80px) translateX(60px);
+}
