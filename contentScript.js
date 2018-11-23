@@ -10,12 +10,12 @@ function refreshUI() {
 }
 
 function findCards() {
-  const links = Array.from(
+  const buyLinks = Array.from(
     document.querySelectorAll(
-      ".PropertyCardContainer__container a.PropertyInformationCommonStyles__addressCopy--link"
+      "#sr_content .PropertyCardContainer__container a.PropertyInformationCommonStyles__addressCopy--link"
     )
   );
-  return links.map(link => {
+  const buyCards = buyLinks.map(link => {
     const rootNode = findParentByClass(
       link,
       "PropertyCardContainer__container"
@@ -39,6 +39,35 @@ function findCards() {
       cost
     };
   });
+
+  if (buyLinks.length > 0) {
+    return buyCards;
+  }
+
+  const rentBoxes = Array.from(
+    document.querySelectorAll("#sr_content td > .box")
+  );
+
+  const rentCards = rentBoxes.map(box => {
+    const rootNode = box;
+    const detailsNode = rootNode.querySelector(".text-block");
+    const costNode = rootNode.querySelector(".info-box strong");
+    const linkNode = rootNode.querySelector(".search_result_title_box h2 a");
+    let cost = costNode ? costNode.textContent.trim() : "";
+    if (cost.indexOf("€") !== 0) {
+      cost = null;
+    }
+
+    return {
+      detailsNode,
+      href: linkNode.href,
+      linkNode,
+      rootNode,
+      cost
+    };
+  });
+
+  return rentCards;
 }
 
 function findParentByClass(node, cls) {
@@ -99,7 +128,6 @@ function addCardControls(cardInfo, force) {
   if (existingNode) {
     // Already added
     if (force === true) {
-      console.log("removing existing node for ", cardInfo, existingNode);
       existingNode.parentNode.removeChild(existingNode);
     } else {
       return;
@@ -253,11 +281,9 @@ function readStorage(cards, callback) {
   });
 
   chrome.storage.sync.get(["global-controls"], function(result) {
-    console.log("got global controls result", result);
     const storedGlobalControls = result && result["global-controls"];
     if (storedGlobalControls) {
       Object.keys(storedGlobalControls).forEach(key => {
-        console.log("copying ", key, storedGlobalControls[key]);
         globalControls[key] = storedGlobalControls[key];
       });
     }
@@ -279,9 +305,17 @@ function writeStorage(callback) {
   });
 }
 
+function autoExpandPropertyDescription() {
+  const node = document.querySelector(".ExpandMoreIndicator__expandLinkText");
+  if (node) {
+    node.click();
+  }
+}
+
 readStorage(findCards(), () => {
   initCards();
   hideCards();
   refreshUI();
+  autoExpandPropertyDescription();
   addChangeListener();
 });

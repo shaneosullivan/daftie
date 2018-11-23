@@ -1,8 +1,11 @@
 .df-card-controls {
   padding: 4px;
-  padding-left: 32px;
-
+  padding-bottom: 16px;
   text-align: left;
+}
+
+.PropertyCardContainer__container .df-card-controls {
+  padding-left: 32px;
 }
 
 .FeaturedCardPropertyInformation__detailsContainer .df-card-controls {
@@ -38,6 +41,12 @@
 
 .df-button {
   cursor: pointer;
+  background: #eff3fa;
+  border: 1px solid #dfdfdf;
+  color: #2b54ab;
+  display: block;
+  padding: 4px 8px;
+  text-decoration: none;
 }
 
 .df-hidden {
