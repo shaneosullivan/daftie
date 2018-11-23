@@ -56,8 +56,6 @@ function findCards() {
     let cost = costNode ? costNode.textContent.trim() : "";
     if (cost.indexOf("€") !== 0) {
       cost = null;
-    } else {
-      cost = cost.split(" ")[0].trim();
     }
 
     return {
