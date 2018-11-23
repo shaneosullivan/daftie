@@ -1,19 +1,33 @@
 let propertyMetadata = {};
 
+const globalControls = {
+  hiddenEnabled: true
+};
+
+function refreshUI() {
+  addGlobalControls();
+  updateHiddenState();
+}
+
 function findCards() {
   const links = Array.from(
     document.querySelectorAll(
-      '.PropertyCardContainer__container a.PropertyInformationCommonStyles__addressCopy--link'
+      ".PropertyCardContainer__container a.PropertyInformationCommonStyles__addressCopy--link"
     )
   );
   return links.map(link => {
-    const rootNode = findParentByClass(link, 'PropertyCardContainer__container');
-    const detailsNode = rootNode.querySelector(
-      '.FeaturedCardPropertyInformation__detailsCopyContainer, .StandardPropertyInfo__detailsContainer, .StandardPropertyInfo__detailsContainerNoBranding'
+    const rootNode = findParentByClass(
+      link,
+      "PropertyCardContainer__container"
     );
-    const costNode = rootNode.querySelector('.PropertyInformationCommonStyles__costAmountCopy');
-    let cost = costNode ? costNode.textContent.trim() : '';
-    if (cost.indexOf('€') !== 0) {
+    const detailsNode = rootNode.querySelector(
+      ".FeaturedCardPropertyInformation__detailsCopyContainer, .StandardPropertyInfo__detailsContainer, .StandardPropertyInfo__detailsContainerNoBranding"
+    );
+    const costNode = rootNode.querySelector(
+      ".PropertyInformationCommonStyles__costAmountCopy"
+    );
+    let cost = costNode ? costNode.textContent.trim() : "";
+    if (cost.indexOf("€") !== 0) {
       cost = null;
     }
 
@@ -37,18 +51,69 @@ function findParentByClass(node, cls) {
   return null;
 }
 
-function addControls(cardInfo) {
-  if (cardInfo.detailsNode.querySelector('daftmonkey-controls')) {
-    // Already added
+function addGlobalControls() {
+  const container = document.querySelector(".tabs-container .tabs-area");
+
+  if (!container) {
     return;
+  }
+
+  const cls = "df-global-controls";
+  const existingNode = document.querySelector(`.${cls}`);
+
+  // Regenerate the controls each time.  It's simpler than fiddling with each
+  // control's state
+  if (existingNode) {
+    existingNode.parentNode.removeChild(existingNode);
+  }
+
+  let hiddenCount = 0;
+  Object.keys(propertyMetadata).forEach(key => {
+    const cardMetadata = propertyMetadata[key];
+    hiddenCount += !!cardMetadata.hidden ? 1 : 0;
+  });
+
+  const toggleHiddenButton = `<button class="df-button df-toggle-hidden" ${
+    hiddenCount > 0 ? "" : 'disabled="true"'
+  }>${
+    globalControls.hiddenEnabled
+      ? `Show ${hiddenCount} hidden`
+      : `Hide ${hiddenCount}`
+  }</button>`;
+
+  const controls = `<div class="df-global-controls">
+    ${toggleHiddenButton}
+   </div>`;
+
+  const frag = document.createElement("div");
+  frag.innerHTML = controls;
+  frag
+    .querySelector(".df-toggle-hidden")
+    .addEventListener("click", toggleHidden, false);
+
+  container.appendChild(frag);
+}
+
+function addCardControls(cardInfo, force) {
+  const existingNode = cardInfo.detailsNode.querySelector(".df-card-controls");
+  if (existingNode) {
+    // Already added
+    if (force === true) {
+      console.log("removing existing node for ", cardInfo, existingNode);
+      existingNode.parentNode.removeChild(existingNode);
+    } else {
+      return;
+    }
   }
   const metadata = getMetadata(cardInfo);
 
-  const controls = `<div class="daftmonkey-controls">
-      <button class="df-button df-hide" >${metadata.hidden ? 'Unhide' : 'Hide'}</button>
+  const controls = `<div class="df-card-controls">
+      <button class="df-button df-hide" >${
+        metadata.hidden ? "Unhide" : "Hide"
+      }</button>
      </div>`;
 
-  let priceInfo = '';
+  let priceInfo = "";
   if (metadata.costs && metadata.costs.length > 1) {
     const rows = metadata.costs.map(costInfo => {
       const date = new Date(Date.parse(costInfo.date));
@@ -61,39 +126,54 @@ function addControls(cardInfo) {
       <div class="df-price-history">
         <div class="df-price-history-header">Price History</div>
         <table class="df-price-history-list">
-          <tbody>${rows.join('')}</tbody>
+          <tbody>${rows.join("")}</tbody>
         </table>
       </div>`;
   }
 
-  const frag = document.createElement('div');
+  const frag = document.createElement("div");
   frag.innerHTML = priceInfo + controls;
 
-  frag.querySelector('.df-hide').addEventListener('click', () => {
-    hideCard(cardInfo);
+  frag.querySelector(".df-hide").addEventListener("click", () => {
+    toggleHideCard(cardInfo);
   });
 
   cardInfo.detailsNode.appendChild(frag);
 }
 
-function hideCard(cardInfo) {
+function toggleHidden() {
+  globalControls.hiddenEnabled = !globalControls.hiddenEnabled;
+  updateHiddenState();
+  writeStorage();
+  addGlobalControls();
+}
+
+function updateHiddenState() {
+  document.body.classList[globalControls.hiddenEnabled ? "remove" : "add"](
+    "df-hidden-disabled"
+  );
+}
+
+function toggleHideCard(cardInfo) {
   const metadata = getMetadata(cardInfo);
   metadata.hidden = !metadata.hidden;
   hideCards();
   writeStorage();
+  refreshUI();
+  addCardControls(cardInfo, true);
 }
 
 function hideCards() {
   const cards = findCards();
   cards.forEach(cardInfo => {
-    if (getMetadata(cardInfo).hidden === true) {
-      cardInfo.rootNode.style.display = 'none';
-    }
+    cardInfo.rootNode.classList[
+      getMetadata(cardInfo).hidden === true ? "add" : "remove"
+    ]("df-hidden");
   });
 }
 
 function addChangeListener() {
-  const cardContainer = document.querySelector('.sr_content');
+  const cardContainer = document.querySelector(".sr_content");
 
   if (cardContainer) {
     // Options for the observer (which mutations to observe)
@@ -114,7 +194,7 @@ function addChangeListener() {
 
 function initCards() {
   const cards = findCards();
-  cards.forEach(addControls);
+  cards.forEach(cardInfo => addCardControls(cardInfo, false));
 
   // Update the costs.
   let costsUpdated = false;
@@ -123,7 +203,10 @@ function initCards() {
     if (!metadata.costs) {
       metadata.costs = [];
     }
-    if (cardInfo.cost && !metadata.costs.some(costInfo => costInfo.value === cardInfo.cost)) {
+    if (
+      cardInfo.cost &&
+      !metadata.costs.some(costInfo => costInfo.value === cardInfo.cost)
+    ) {
       metadata.costs.push({
         date: new Date().toISOString(),
         value: cardInfo.cost
@@ -148,19 +231,49 @@ function getStorageKey(cardInfo) {
   return `property:${cardInfo.href}`;
 }
 
+function getGlobalControlKeys() {
+  return Object.keys(globalControls).map(key => "globalControls." + key);
+}
+
 function readStorage(cards, callback) {
   const keys = cards.map(cardInfo => getStorageKey(cardInfo));
+  let completeCount = 0;
+
+  function possiblyCallback() {
+    if (completeCount === 2) {
+      callback && callback();
+    }
+  }
+
   chrome.storage.sync.get(keys, function(result) {
     propertyMetadata = result;
-    callback && callback();
+    completeCount++;
+
+    possiblyCallback();
+  });
+
+  chrome.storage.sync.get(["global-controls"], function(result) {
+    console.log("got global controls result", result);
+    const storedGlobalControls = result && result["global-controls"];
+    if (storedGlobalControls) {
+      Object.keys(storedGlobalControls).forEach(key => {
+        console.log("copying ", key, storedGlobalControls[key]);
+        globalControls[key] = storedGlobalControls[key];
+      });
+    }
+    completeCount++;
+
+    possiblyCallback();
   });
 }
 
-function writeStorage(cards, callback) {
+function writeStorage(callback) {
   const obj = {};
   Object.keys(propertyMetadata).forEach(key => {
     obj[key] = propertyMetadata[key];
   });
+  obj["global-controls"] = globalControls;
+
   chrome.storage.sync.set(obj, function() {
     callback && callback();
   });
@@ -169,5 +282,6 @@ function writeStorage(cards, callback) {
 readStorage(findCards(), () => {
   initCards();
   hideCards();
+  refreshUI();
   addChangeListener();
 });

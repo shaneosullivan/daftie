@@ -1,13 +1,20 @@
-.daftmonkey-controls {
+.df-card-controls {
   padding: 4px;
   padding-left: 32px;
 
   text-align: left;
 }
 
-.FeaturedCardPropertyInformation__detailsContainer .daftmonkey-controls {
+.FeaturedCardPropertyInformation__detailsContainer .df-card-controls {
   padding-left: 0px;
   transform: translateY(16px);
+}
+
+.df-global-controls {
+  background: #fcfae1;
+  border: 1px solid #dfdfdf;
+  border-top: 0px none;
+  padding: 10px 20px 10px;
 }
 
 .df-price-history {
@@ -31,6 +38,15 @@
 
 .df-button {
   cursor: pointer;
+}
+
+.df-hidden {
+  display: none !important;
+  transform: scale(0.97) !important;
+}
+
+.df-hidden-disabled .df-hidden {
+  display: block !important;
 }
 
 #pbxl_photo_carousel {
