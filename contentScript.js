@@ -56,6 +56,8 @@ function findCards() {
     let cost = costNode ? costNode.textContent.trim() : "";
     if (cost.indexOf("€") !== 0) {
       cost = null;
+    } else {
+      cost = cost.split(" ")[0].trim();
     }
 
     return {
@@ -129,6 +131,12 @@ function addCardControls(cardInfo, force) {
     // Already added
     if (force === true) {
       existingNode.parentNode.removeChild(existingNode);
+      const priceInfoNode = cardInfo.detailsNode.querySelector(
+        ".df-price-history"
+      );
+      if (priceInfoNode) {
+        priceInfoNode.parentNode.removeChild(priceInfoNode);
+      }
     } else {
       return;
     }
