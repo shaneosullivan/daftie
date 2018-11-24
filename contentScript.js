@@ -352,10 +352,141 @@ function autoExpandPropertyDescription() {
   }
 }
 
+function getCardIndex(node) {
+  const text = node
+    .querySelector(".sr_counter")
+    .textContent.split(".")
+    .join("")
+    .trim();
+  return parseInt(text, 10);
+}
+
+function getPageLinks() {
+  const nodes = document.querySelectorAll(
+    ".paging li:not(.next_page):not(.prev_page) a"
+  );
+  return Array.from(nodes)
+    .filter(node => {
+      return node.textContent !== "...";
+    })
+    .map(node => {
+      return { node, link: node.href };
+    });
+}
+
+function prefetchPages() {
+  const pageLinks = getPageLinks();
+  const promises = pageLinks.map(({ node, link }) => {
+    return fetch(link)
+      .then(res => res.text())
+      .then(html => sanitizeHtml(html))
+      .then(html => extractPageContent(html));
+  });
+
+  Promise.all(promises).then(pages => {
+    if (pages.length > 0) {
+      const allCards = findCards();
+      const cardWrapper = allCards[0].rootNode.parentNode;
+
+      let allScripts = "";
+      const firstCardIndex = getCardIndex(allCards[0].rootNode);
+
+      pages.forEach(({ nodes, script }) => {
+        nodes.forEach(node => {
+          const index = getCardIndex(node);
+
+          // Insert the nodes in the correct order.  If we landed on a page in
+          // the middle of the list of pages somehow, but earlier pages before
+          // the current page where appropriate.
+          if (index < firstCardIndex) {
+            cardWrapper.insertBefore(node, allCards[0].rootNode);
+          } else {
+            cardWrapper.appendChild(node);
+          }
+        });
+        allScripts += script;
+      });
+
+      // Execute the scripts for the cards we downloaded.  These at least
+      // initialize the images.
+      const scriptNode = document.createElement("script");
+      scriptNode.setAttribute("type", "text/javascript");
+      scriptNode.textContent = allScripts;
+      document.body.appendChild(scriptNode);
+
+      // Move the paging node back to the bottom
+      const pagingNode = document.querySelector("ul.paging");
+      pagingNode.parentNode.appendChild(pagingNode);
+
+      const prevLink = pagingNode.querySelector("li.prev_page + li a");
+      const nextLinkOld = pagingNode.querySelector("li.next_page");
+      const nextLink = nextLinkOld
+        ? nextLinkOld.previousElementSibling.querySelector("a")
+        : null;
+
+      if (prevLink && prevLink.textContent === "...") {
+        prevLink.textContent = "Previous";
+        prevLink.parentNode.style.display = "inline-block";
+      }
+      if (nextLink && nextLink.textContent === "...") {
+        nextLink.textContent = "Next";
+        nextLink.parentNode.style.display = "inline-block";
+      }
+    }
+  });
+}
+
+function sanitizeHtml(html) {
+  return html
+    .split("<script")
+    .join("<notscript")
+    .split("</script")
+    .join("</notscript");
+}
+
+function extractPageContent(html) {
+  // Find the body tag
+  const bodyStartIdx = html.indexOf("<body");
+  const bodyEndIdx = html.indexOf("</body");
+  const bodyOuterContent = html.substring(bodyStartIdx, bodyEndIdx);
+  const bodyContent = bodyOuterContent.substring(
+    bodyOuterContent.indexOf(">") + 1
+  );
+  const frag = document.createElement("div");
+  frag.innerHTML = bodyContent;
+
+  let buyCards = frag.querySelectorAll(".PropertyCardContainer__container");
+  let cards = [];
+  if (buyCards.length > 0) {
+    cards = Array.from(buyCards);
+  } else {
+    let rentCards = frag.querySelectorAll("#sr_content .box");
+    cards = Array.from(rentCards);
+  }
+
+  let script = "";
+  cards.forEach(node => {
+    const scriptNode = node.nextElementSibling;
+
+    // We have to collect the contents of the script tags that follow each
+    // card, as they initialize the image for the card.  Weird how they don't
+    // just output that in the html, but here we are....
+    if (scriptNode.tagName.toLowerCase() === "notscript") {
+      script += scriptNode.textContent;
+    }
+  });
+
+  return {
+    nodes: cards,
+    script: script
+  };
+}
+
 readStorage(findCards(), () => {
   initCards();
   hideCards();
   refreshUI();
   autoExpandPropertyDescription();
   addChangeListener();
+  prefetchPages();
 });
