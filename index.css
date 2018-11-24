@@ -63,7 +63,9 @@
 }
 
 .df-notes-container {
-  display: none;
+  height: 0px;
+  overflow: hidden;
+  transition: height 0.3s linear;
 }
 
 .df-notes-container textarea {
@@ -71,8 +73,7 @@
 }
 
 .df-notes-container.shown {
-  display: block;
-  min-height: 50px;
+  height: 81px;
 }
 
 .df-notes-container .df-notes-inner {
@@ -87,6 +88,11 @@
 .PropertyCardContainer__container .df-notes-container {
   border: 1px solid #ededed;
   border-top: 0px none;
+  border-bottom: 0px none;
+}
+
+.PropertyCardContainer__container .df-notes-container.shown {
+  border-bottom: 1px solid #ededed;
 }
 
 #sr_content .box .df-notes-inner {
