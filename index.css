@@ -1,11 +1,11 @@
 .df-card-controls {
   padding: 4px;
-  padding-bottom: 16px;
   text-align: left;
 }
 
 .PropertyCardContainer__container .df-card-controls {
   padding-left: 32px;
+  padding-bottom: 16px;
 }
 
 .FeaturedCardPropertyInformation__detailsContainer .df-card-controls {
@@ -48,6 +48,7 @@
   border: 1px solid #dfdfdf;
   color: #2b54ab;
   display: inline-block;
+  font: 400 11px system-ui;
   padding: 4px 8px;
   text-decoration: none;
 }
@@ -61,13 +62,38 @@
   display: block !important;
 }
 
-.df-notes-text {
+.df-notes-container {
   display: none;
-  margin-top: 4px;
 }
 
-.df-notes-text.shown {
+.df-notes-container textarea {
+  resize: none;
+}
+
+.df-notes-container.shown {
   display: block;
+  min-height: 50px;
+}
+
+.df-notes-container .df-notes-inner {
+  background-color: #fcfae1;
+  padding: 8px;
+}
+
+#sr_content .box {
+  position: relative;
+}
+
+.PropertyCardContainer__container .df-notes-container {
+  border: 1px solid #ededed;
+  border-top: 0px none;
+}
+
+#sr_content .box .df-notes-inner {
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  width: 100%;
 }
 
 #pbxl_photo_carousel {

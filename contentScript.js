@@ -146,9 +146,6 @@ function addCardControls(cardInfo, force) {
         metadata.hidden ? "Unhide" : "Hide"
       }</button>
       <button class="df-button df-notes">Notes</button>
-      <textarea class="df-notes-text${
-        metadata.notes ? " shown" : ""
-      }" rows="4" cols="80">${metadata.notes || ""}</textarea>
      </div>`;
 
   let priceInfo = "";
@@ -180,9 +177,23 @@ function addCardControls(cardInfo, force) {
     toggleNotes(cardInfo);
   });
 
-  frag.querySelector(".df-notes-text").addEventListener("change", evt => {
-    saveNotes(cardInfo, evt.target.value);
-  });
+  const notesFrag = document.createElement("div");
+  notesFrag.innerHTML = `
+    <div class="df-notes-container${metadata.notes ? " shown" : ""}">
+      <div class="df-notes-inner">
+        <textarea class="df-notes-text${
+          metadata.notes ? " shown" : ""
+        }" rows="3" cols="80" placeholder="Enter notes here">${metadata.notes ||
+    ""}</textarea>
+      </div>
+    </div>`;
+  cardInfo.rootNode.appendChild(notesFrag);
+
+  cardInfo.rootNode
+    .querySelector(".df-notes-text")
+    .addEventListener("change", evt => {
+      saveNotes(cardInfo, evt.target.value);
+    });
 
   cardInfo.detailsNode.appendChild(frag);
 }
@@ -210,7 +221,7 @@ function toggleHideCard(cardInfo) {
 }
 
 function toggleNotes(cardInfo) {
-  const textarea = cardInfo.detailsNode.querySelector(".df-notes-text");
+  const textarea = cardInfo.rootNode.querySelector(".df-notes-container");
   textarea.classList.toggle("shown");
 }
 
