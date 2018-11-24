@@ -142,9 +142,13 @@ function addCardControls(cardInfo, force) {
   const metadata = getMetadata(cardInfo);
 
   const controls = `<div class="df-card-controls">
-      <button class="df-button df-hide" >${
+      <button class="df-button df-hide">${
         metadata.hidden ? "Unhide" : "Hide"
       }</button>
+      <button class="df-button df-notes">Notes</button>
+      <textarea class="df-notes-text${
+        metadata.notes ? " shown" : ""
+      }" rows="4" cols="80">${metadata.notes || ""}</textarea>
      </div>`;
 
   let priceInfo = "";
@@ -172,6 +176,14 @@ function addCardControls(cardInfo, force) {
     toggleHideCard(cardInfo);
   });
 
+  frag.querySelector(".df-notes").addEventListener("click", () => {
+    toggleNotes(cardInfo);
+  });
+
+  frag.querySelector(".df-notes-text").addEventListener("change", evt => {
+    saveNotes(cardInfo, evt.target.value);
+  });
+
   cardInfo.detailsNode.appendChild(frag);
 }
 
@@ -195,6 +207,17 @@ function toggleHideCard(cardInfo) {
   writeStorage();
   refreshUI();
   addCardControls(cardInfo, true);
+}
+
+function toggleNotes(cardInfo) {
+  const textarea = cardInfo.detailsNode.querySelector(".df-notes-text");
+  textarea.classList.toggle("shown");
+}
+
+function saveNotes(cardInfo, textValue) {
+  const metadata = getMetadata(cardInfo);
+  metadata.notes = textValue;
+  writeStorage();
 }
 
 function hideCards() {
