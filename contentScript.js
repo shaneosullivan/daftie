@@ -388,10 +388,12 @@ function prefetchPages() {
       const allCards = findCards();
       const cardWrapper = allCards[0].rootNode.parentNode;
 
-      let allScripts = "";
+      // const allScripts = [];
+      // let pageScripts = "";
       const firstCardIndex = getCardIndex(allCards[0].rootNode);
 
-      pages.forEach(({ nodes, script }) => {
+      pages.forEach((pageInfo, idx) => {
+        const { nodes, script } = pageInfo;
         nodes.forEach(node => {
           const index = getCardIndex(node);
 
@@ -404,15 +406,71 @@ function prefetchPages() {
             cardWrapper.appendChild(node);
           }
         });
-        allScripts += script;
+        // pageScripts += script;
+
+        // Chunk the script injection by page.  For some reason
+        // (a race condition?) some images in later pages do not load
+        // if (idx > 0 && (idx + 1) % 20 === 0) {
+        //   allScripts.push(pageScripts);
+        //   pageScripts = "";
+        // }
       });
 
-      // Execute the scripts for the cards we downloaded.  These at least
-      // initialize the images.
-      const scriptNode = document.createElement("script");
-      scriptNode.setAttribute("type", "text/javascript");
-      scriptNode.textContent = allScripts;
-      document.body.appendChild(scriptNode);
+      // if (pageScripts) {
+      //   allScripts.push(pageScripts);
+      // }
+
+      // const interval = setInterval(() => {
+      //   if (allScripts.length > 0) {
+      //     const scriptContent = allScripts.shift();
+      //
+      //     // Avoid inserting too many scripts on the page.  At least in older
+      //     // browsers there was an annoying limit (39?) of how many you could
+      //     // insert dynamically.  Call me old fashioned, but let's clean up...
+      //     const existingScriptNode = document.getElementById("df-script");
+      //     if (existingScriptNode) {
+      //       existingScriptNode.parentNode.removeChild(existingScriptNode);
+      //     }
+      //
+      //     // Make a new script node
+      //     const scriptNode = document.createElement("script");
+      //     scriptNode.setAttribute("id", "df-script");
+      //     scriptNode.setAttribute("type", "text/javascript");
+      //     scriptNode.textContent = scriptContent;
+      //     document.body.appendChild(scriptNode);
+      //   } else {
+      //     console.log("clearning interval");
+      //     clearInterval(interval);
+      //   }
+      // }, 500);
+
+      // Set an interval go through the lazily loaded images and add their
+      // images bit by bit
+      const interval = setInterval(() => {
+        const lazyImages = Array.from(
+          document.querySelectorAll("img.lazy[data-original]")
+        );
+
+        let counter = 0;
+        if (lazyImages.length > 0) {
+          lazyImages.some((img, idx) => {
+            const url = img.getAttribute("data-original");
+            if (url) {
+              img.src = url;
+              // Remove the data-original attribute so this node doesn't show up
+              // in the query any more
+              img.removeAttribute("data-original");
+              counter++;
+            }
+            return counter > 10;
+          });
+        }
+
+        if (counter === 0) {
+          // If we didn't process any nodes, we're done!
+          clearInterval(interval);
+        }
+      }, 1000);
 
       // Move the paging node back to the bottom
       const pagingNode = document.querySelector("ul.paging");
