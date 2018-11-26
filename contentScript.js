@@ -23,20 +23,12 @@ function findCards() {
     const detailsNode = rootNode.querySelector(
       ".FeaturedCardPropertyInformation__detailsCopyContainer, .StandardPropertyInfo__detailsContainer, .StandardPropertyInfo__detailsContainerNoBranding"
     );
-    const costNode = rootNode.querySelector(
-      ".PropertyInformationCommonStyles__costAmountCopy"
-    );
-    let cost = costNode ? costNode.textContent.trim() : "";
-    if (cost.indexOf("€") !== 0) {
-      cost = null;
-    }
 
     return {
       detailsNode,
       href: link.href,
       linkNode: link,
-      rootNode,
-      cost
+      rootNode
     };
   });
 
@@ -51,19 +43,13 @@ function findCards() {
   const rentCards = rentBoxes.map(box => {
     const rootNode = box;
     const detailsNode = rootNode.querySelector(".text-block");
-    const costNode = rootNode.querySelector(".info-box strong");
     const linkNode = rootNode.querySelector(".search_result_title_box h2 a");
-    let cost = costNode ? costNode.textContent.trim() : "";
-    if (cost.indexOf("€") !== 0) {
-      cost = null;
-    }
 
     return {
       detailsNode,
       href: linkNode.href,
       linkNode,
-      rootNode,
-      cost
+      rootNode
     };
   });
 
@@ -129,12 +115,6 @@ function addCardControls(cardInfo, force) {
     // Already added
     if (force === true) {
       existingNode.parentNode.removeChild(existingNode);
-      const priceInfoNode = cardInfo.detailsNode.querySelector(
-        ".df-price-history"
-      );
-      if (priceInfoNode) {
-        priceInfoNode.parentNode.removeChild(priceInfoNode);
-      }
     } else {
       return;
     }
@@ -148,26 +128,8 @@ function addCardControls(cardInfo, force) {
       <button class="df-button df-notes">Notes</button>
      </div>`;
 
-  let priceInfo = "";
-  if (metadata.costs && metadata.costs.length > 1) {
-    const rows = metadata.costs.map(costInfo => {
-      const date = new Date(Date.parse(costInfo.date));
-      return `<tr>
-        <td>${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}</td>
-        <td>${costInfo.value}</td>
-      </tr>`;
-    });
-    priceInfo = `
-      <div class="df-price-history">
-        <div class="df-price-history-header">Price History</div>
-        <table class="df-price-history-list">
-          <tbody>${rows.join("")}</tbody>
-        </table>
-      </div>`;
-  }
-
   const frag = document.createElement("div");
-  frag.innerHTML = priceInfo + controls;
+  frag.innerHTML = controls;
 
   frag.querySelector(".df-hide").addEventListener("click", () => {
     toggleHideCard(cardInfo);
@@ -263,28 +225,6 @@ function addChangeListener() {
 function initCards() {
   const cards = findCards();
   cards.forEach(cardInfo => addCardControls(cardInfo, false));
-
-  // Update the costs.
-  let costsUpdated = false;
-  cards.filter(cardInfo => !!cardInfo.cost).forEach(cardInfo => {
-    const metadata = getMetadata(cardInfo);
-    if (!metadata.costs) {
-      metadata.costs = [];
-    }
-    if (
-      cardInfo.cost &&
-      !metadata.costs.some(costInfo => costInfo.value === cardInfo.cost)
-    ) {
-      metadata.costs.push({
-        date: new Date().toISOString(),
-        value: cardInfo.cost
-      });
-      costsUpdated = true;
-    }
-  });
-  if (costsUpdated) {
-    writeStorage();
-  }
 }
 
 function getMetadata(cardInfo) {
@@ -313,14 +253,14 @@ function readStorage(cards, callback) {
     }
   }
 
-  chrome.storage.sync.get(keys, function(result) {
+  chrome.storage.local.get(keys, function(result) {
     propertyMetadata = result;
     completeCount++;
 
     possiblyCallback();
   });
 
-  chrome.storage.sync.get(["global-controls"], function(result) {
+  chrome.storage.local.get(["global-controls"], function(result) {
     const storedGlobalControls = result && result["global-controls"];
     if (storedGlobalControls) {
       Object.keys(storedGlobalControls).forEach(key => {
@@ -336,11 +276,14 @@ function readStorage(cards, callback) {
 function writeStorage(callback) {
   const obj = {};
   Object.keys(propertyMetadata).forEach(key => {
-    obj[key] = propertyMetadata[key];
+    // Only write objects that actually have something in them
+    if (Object.keys(propertyMetadata[key]).length > 0) {
+      obj[key] = propertyMetadata[key];
+    }
   });
   obj["global-controls"] = globalControls;
 
-  chrome.storage.sync.set(obj, function() {
+  chrome.storage.local.set(obj, function() {
     callback && callback();
   });
 }
@@ -375,6 +318,13 @@ function getPageLinks() {
 }
 
 function prefetchPages() {
+  const allCards = findCards();
+
+  // If there are no properties listed, ignore this page
+  if (allCards.length === 0) {
+    return;
+  }
+
   const pageLinks = getPageLinks();
   const promises = pageLinks.map(({ node, link }) => {
     return fetch(link)
@@ -385,7 +335,6 @@ function prefetchPages() {
 
   Promise.all(promises).then(pages => {
     if (pages.length > 0) {
-      const allCards = findCards();
       const cardWrapper = allCards[0].rootNode.parentNode;
 
       // const allScripts = [];
@@ -415,6 +364,9 @@ function prefetchPages() {
         //   pageScripts = "";
         // }
       });
+
+      // Add the card controls to the newly inserted property cards.
+      initCards();
 
       // if (pageScripts) {
       //   allScripts.push(pageScripts);
@@ -540,11 +492,17 @@ function extractPageContent(html) {
   };
 }
 
-readStorage(findCards(), () => {
-  initCards();
-  hideCards();
-  refreshUI();
-  autoExpandPropertyDescription();
-  addChangeListener();
-  prefetchPages();
-});
+function isSupportedPageType() {
+  return findCards().length > 0;
+}
+
+if (isSupportedPageType()) {
+  readStorage(findCards(), () => {
+    initCards();
+    hideCards();
+    refreshUI();
+    autoExpandPropertyDescription();
+    addChangeListener();
+    prefetchPages();
+  });
+}
