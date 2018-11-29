@@ -3,6 +3,16 @@
   text-align: left;
 }
 
+.PropertyCardContainer__container + .df-controls-wrapper .df-card-controls {
+  margin-top: -40px;
+  margin-bottom: 40px;
+}
+
+.box + .df-controls-wrapper .df-card-controls {
+  margin-top: -10px;
+  margin-bottom: 20px;
+}
+
 .PropertyCardContainer__container .df-card-controls {
   padding-left: 32px;
   padding-bottom: 16px;
@@ -26,22 +36,6 @@
   padding: 4px;
 }
 
-.PropertyCardContainer__container .df-price-history {
-  margin-left: 32px;
-}
-
-.df-price-history-list {
-  text-align: left;
-}
-
-.df-price-history-list td {
-  padding-right: 8px;
-}
-
-.df-price-history-header {
-  font-weight: bold;
-}
-
 .df-button {
   cursor: pointer;
   background: #eff3fa;
@@ -62,21 +56,29 @@
   display: block !important;
 }
 
+.df-hidden + .df-controls-wrapper {
+  display: none;
+}
+
+.df-hidden-disabled .df-hidden + .df-controls-wrapper {
+  display: block !important;
+}
+
 .df-notes-container {
   overflow: hidden;
+  margin-top: 8px;
+  transition: height 0.3s linear;
+  height: 0px;
 }
 
 .df-notes-container textarea {
   resize: none;
 }
 
-.box .df-notes-container {
-  display: none;
-}
-
-.box .df-notes-container.shown {
-  min-height: 50px;
+.df-notes-container.shown {
+  border-bottom: 1px solid #ededed;
   display: block;
+  height: 81px;
 }
 
 .df-notes-container .df-notes-inner {
@@ -84,32 +86,8 @@
   padding: 8px;
 }
 
-#sr_content .box {
-  position: relative;
-}
-
-.PropertyCardContainer__container .df-notes-container {
-  border: 1px solid #ededed;
-  border-top: 0px none;
-  border-bottom: 0px none;
-  transition: height 0.3s linear;
-  height: 0px;
-}
-
-.PropertyCardContainer__container .df-notes-container.shown {
-  border-bottom: 1px solid #ededed;
-  height: 81px;
-}
-
-#sr_content .box .df-notes-inner {
-  position: absolute;
-  bottom: 0px;
-  left: 0px;
-  width: 100%;
-}
-
 #pbxl_photo_carousel {
-  transform: scale(1.7) translateY(80px) translateX(60px);
+  transform: scale(1.6) translateY(80px) translateX(60px);
 }
 
 ul.paging li {
