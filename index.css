@@ -1,15 +1,20 @@
+.df-controls-wrapper {
+  border: 1px solid #dfdfdf;
+  border-top: 0px none;
+}
+
 .df-card-controls {
   padding: 4px;
   text-align: left;
 }
 
-.PropertyCardContainer__container + .df-controls-wrapper .df-card-controls {
+.PropertyCardContainer__container + .df-controls-wrapper {
   margin-top: -40px;
   margin-bottom: 40px;
 }
 
-.box + .df-controls-wrapper .df-card-controls {
-  margin-top: -10px;
+.box + .df-controls-wrapper {
+  margin-top: -15px;
   margin-bottom: 20px;
 }
 
@@ -66,7 +71,6 @@
 
 .df-notes-container {
   overflow: hidden;
-  margin-top: 8px;
   transition: height 0.3s linear;
   height: 0px;
 }
@@ -76,9 +80,9 @@
 }
 
 .df-notes-container.shown {
-  border-bottom: 1px solid #ededed;
+  border-top: 1px solid #ededed;
   display: block;
-  height: 81px;
+  height: 63px;
 }
 
 .df-notes-container .df-notes-inner {
@@ -86,10 +90,31 @@
   padding: 8px;
 }
 
+.df-details-container {
+  border-top: 1px solid #dfdfdf;
+  color: #666666;
+  padding: 10px;
+  display: none;
+}
+
+.df-details-container.shown {
+  display: block;
+}
+
+.df-details-container #dfp-property_details_full,
+.df-details-container #smi-map-text-holder,
+.df-details-container .smi-overview-header {
+  display: none;
+}
+
 #pbxl_photo_carousel {
   transform: scale(1.6) translateY(80px) translateX(60px);
 }
 
 ul.paging li {
+  display: none;
+}
+
+notscript {
   display: none;
 }
