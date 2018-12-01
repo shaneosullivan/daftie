@@ -24,6 +24,10 @@ function findCards() {
       "#sr_content .PropertyCardContainer__container a.PropertyInformationCommonStyles__addressCopy--link"
     )
   );
+
+  const transactionType =
+    window.location.href.indexOf("for-sale") > -1 ? "sale" : "rent";
+
   const buyCards = buyLinks.map(link => {
     const rootNode = findParentByClass(
       link,
@@ -37,7 +41,8 @@ function findCards() {
       detailsNode,
       href: link.href,
       linkNode: link,
-      rootNode
+      rootNode,
+      transactionType
     };
   });
 
@@ -58,11 +63,20 @@ function findCards() {
       detailsNode,
       href: linkNode.href,
       linkNode,
-      rootNode
+      rootNode,
+      transactionType
     };
   });
 
   return rentCards;
+}
+
+function getPropertyId(cardInfo) {
+  // Links look like
+  // https://www.daft.ie/cork/houses-for-rent/ballineen/dromidclough-derrigra-ballineen-cork-1892028/
+  // and the id is the last bit.
+  const parts = cardInfo.href.split("-");
+  return parts[parts.length - 1].split("/")[0];
 }
 
 function findParentByClass(node, cls) {
@@ -236,10 +250,26 @@ function toggleDetails(cardInfo) {
   return cardInfo.extraDetailsNode.classList.contains("shown");
 }
 
-function saveNotes(cardInfo, textValue) {
+function saveNotes(cardInfo, textValue, skipServerSave) {
   const metadata = getMetadata(cardInfo);
   metadata.notes = textValue;
   writeStorage();
+
+  if (!skipServerSave) {
+    const propertyId = getPropertyId(cardInfo);
+
+    var formData = new FormData();
+    formData.append("action", "update_note");
+    formData.append("note", textValue);
+    formData.append("adId", propertyId);
+    formData.append("adType", cardInfo.transactionType);
+
+    // Try to save the note to the server for the user too!
+    fetch("/my-daft/ajax/saved-ads/", {
+      method: "POST",
+      body: formData
+    });
+  }
 }
 
 function hideCards() {
@@ -588,6 +618,23 @@ function isSupportedPageType() {
   return findCards().length > 0;
 }
 
+// When the user saves a note using the Daft native notes tools, also save it
+// locally so we can stay in sync
+function storeNoteFromDaftForm() {
+  const saveButton = document.getElementById("save_note");
+  const textarea = document.querySelector("textarea#modal_note");
+  if (saveButton && textarea) {
+    saveButton.addEventListener(
+      "click",
+      evt => {
+        const href = "https://www.daft.ie" + window.location.pathname;
+        saveNotes({ href }, textarea.value.trim(), true);
+      },
+      true
+    );
+  }
+}
+
 if (isSupportedPageType()) {
   readStorage(findCards(), () => {
     initCards();
@@ -597,4 +644,6 @@ if (isSupportedPageType()) {
     addChangeListener();
     prefetchPages();
   });
+} else {
+  storeNoteFromDaftForm();
 }
