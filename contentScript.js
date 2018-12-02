@@ -327,12 +327,18 @@ function showPhotos(cardInfo) {
         document.body.removeEventListener("keydown", keyListener, false);
       }
 
+      function unhideImage(evt) {
+        evt.target.classList.add("unhidden");
+      }
+
       document.body.addEventListener("keydown", keyListener, false);
 
       const images = urls.map(url => {
         const img = document.createElement("img");
         img.src = url;
         img.className = "df-img";
+
+        img.addEventListener("load", unhideImage);
         return img;
       });
 
