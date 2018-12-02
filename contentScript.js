@@ -153,6 +153,7 @@ function addCardControls(cardInfo, force) {
       }</button>
       <button class="df-button df-notes">Notes</button>
       <button class="df-button df-details">Show Details</button>
+      <button class="df-button df-photos">Show Photos</button>
      </div>`;
 
   const frag = document.createElement("div");
@@ -172,6 +173,10 @@ function addCardControls(cardInfo, force) {
     console.log("toggleDetails");
     const isShown = toggleDetails(cardInfo);
     evt.target.textContent = isShown ? "Hide Details" : "Show Details";
+  });
+
+  frag.querySelector(".df-photos").addEventListener("click", () => {
+    showPhotos(cardInfo);
   });
 
   const notesFrag = document.createElement("div");
@@ -237,7 +242,7 @@ function toggleDetails(cardInfo) {
     const errMsg =
       "Sorry, something went wrong, we could not get the property details";
 
-    fetchPropertyDetails(cardInfo.href)
+    fetchPropertyDetails(cardInfo)
       .then(content => {
         detailsNode.innerHTML = content || errMsg;
       })
@@ -248,6 +253,88 @@ function toggleDetails(cardInfo) {
 
   cardInfo.extraDetailsNode.classList.toggle("shown");
   return cardInfo.extraDetailsNode.classList.contains("shown");
+}
+
+function showPhotos(cardInfo) {
+  fetchPageBody(cardInfo).then(frag => {
+    console.log("showPhotos, ", frag);
+    const script = Array.from(frag.querySelectorAll("notscript")).filter(
+      node => {
+        return node.textContent.indexOf("pb_media") > -1;
+      }
+    )[0];
+
+    if (script) {
+      const urls = script.textContent
+        .split("\n")
+        .filter(line => {
+          // Only use the lines that contain a url
+          return line.indexOf("http") > -1;
+        })
+        .map(line => {
+          // start the string at http, end just before the last double quote, e.g.
+          // , "http://some.domain/foo.jpg",
+          return line.substring(
+            line.indexOf('"') + 1,
+            line.lastIndexOf('"') - 1
+          );
+        });
+
+      const modal = document.createElement("div");
+      modal.className = "df-modal";
+
+      function keyCloseListener(evt) {
+        // ESC key
+        if (evt.keyCode === 27) {
+          removeModal();
+        }
+      }
+
+      function removeModal() {
+        modal.parentNode.removeChild(modal);
+        document.body.removeEventListener("keydown", keyCloseListener, false);
+      }
+
+      document.body.addEventListener("keydown", keyCloseListener, false);
+
+      const images = urls.map(url => {
+        const img = document.createElement("img");
+        img.src = url;
+        img.className = "df-img";
+        return img;
+      });
+
+      const closeContainer = `
+        <div class="df-close-wrapper">
+          <button class="df-button df-modal-close">
+            Close
+          </button>
+        </div>
+      `;
+
+      modal.innerHTML = closeContainer;
+
+      images.forEach(img => {
+        const div = document.createElement("div");
+        div.appendChild(img);
+        div.className = "df-img-wrapper";
+
+        modal.appendChild(div);
+      });
+
+      modal.addEventListener(
+        "click",
+        evt => {
+          if (evt.target.tagName !== "IMG") {
+            removeModal();
+          }
+        },
+        false
+      );
+
+      document.body.appendChild(modal);
+    }
+  });
 }
 
 function saveNotes(cardInfo, textValue, skipServerSave) {
@@ -549,6 +636,22 @@ function sanitizeHtml(html) {
     .join("</notscript");
 }
 
+function fetchPageBody(cardInfo) {
+  if (cardInfo.pageContentNode) {
+    return Promise.resolve(cardInfo.pageContentNode);
+  } else {
+    return fetch(cardInfo.href)
+      .then(resp => resp.text())
+      .then(html => sanitizeHtml(html))
+      .then(html => {
+        const frag = document.createElement("div");
+        frag.innerHTML = html;
+        cardInfo.pageContentNode = frag;
+        return frag;
+      });
+  }
+}
+
 function getBodyContent(html) {
   // Find the body tag
   const bodyStartIdx = html.indexOf("<body");
@@ -560,26 +663,19 @@ function getBodyContent(html) {
   return bodyContent;
 }
 
-function fetchPropertyDetails(href) {
-  return fetch(href)
-    .then(resp => resp.text())
-    .then(html => sanitizeHtml(html))
-    .then(html => {
-      const bodyContent = getBodyContent(html);
-      const frag = document.createElement("div");
-      frag.innerHTML = bodyContent;
-
-      const propertyDetailsNodes = frag.querySelectorAll(
-        ".PropertyDescription__propertyDescription, .PropertyFeatures__featuresList, #smi-tab-overview"
-      );
-      if (propertyDetailsNodes) {
-        return Array.from(propertyDetailsNodes)
-          .map(node => node.innerHTML)
-          .join("<br />");
-      } else {
-        return null;
-      }
-    });
+function fetchPropertyDetails(cardInfo) {
+  return fetchPageBody(cardInfo).then(frag => {
+    const propertyDetailsNodes = frag.querySelectorAll(
+      ".PropertyDescription__propertyDescription, .PropertyFeatures__featuresList, #smi-tab-overview"
+    );
+    if (propertyDetailsNodes) {
+      return Array.from(propertyDetailsNodes)
+        .map(node => node.innerHTML)
+        .join("<br />");
+    } else {
+      return null;
+    }
+  });
 }
 
 function extractPageContent(html) {

@@ -107,6 +107,40 @@
   display: none;
 }
 
+.df-modal {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  overflow-y: auto;
+  text-align: center;
+  padding-top: 40px;
+}
+
+.df-img-wrapper {
+  height: 100%;
+  text-align: center;
+}
+
+.df-img {
+  height: 90%;
+  margin-bottom: 16px;
+}
+
+.df-close-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  text-align: center;
+}
+
+.df-modal-close {
+  margin-top: 9px;
+}
+
 #pbxl_photo_carousel {
   transform: scale(1.6) translateY(80px) translateX(60px);
 }
