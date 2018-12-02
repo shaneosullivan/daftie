@@ -170,7 +170,6 @@ function addCardControls(cardInfo, force) {
   });
 
   frag.querySelector(".df-details").addEventListener("click", evt => {
-    console.log("toggleDetails");
     const isShown = toggleDetails(cardInfo);
     evt.target.textContent = isShown ? "Hide Details" : "Show Details";
   });
@@ -257,45 +256,78 @@ function toggleDetails(cardInfo) {
 
 function showPhotos(cardInfo) {
   fetchPageBody(cardInfo).then(frag => {
-    console.log("showPhotos, ", frag);
-    const script = Array.from(frag.querySelectorAll("notscript")).filter(
-      node => {
-        return node.textContent.indexOf("pb_media") > -1;
-      }
-    )[0];
+    // Find list of photo images from the HTML for the carousel in the page.
+    const urls = Array.from(
+      frag.querySelectorAll("#pbxl_photo_carousel ul li img")
+    ).map(img => img.src);
 
-    if (script) {
-      const urls = script.textContent
-        .split("\n")
-        .filter(line => {
-          // Only use the lines that contain a url
-          return line.indexOf("http") > -1;
-        })
-        .map(line => {
-          // start the string at http, end just before the last double quote, e.g.
-          // , "http://some.domain/foo.jpg",
-          return line.substring(
-            line.indexOf('"') + 1,
-            line.lastIndexOf('"') - 1
-          );
-        });
-
+    if (urls.length > 0) {
       const modal = document.createElement("div");
       modal.className = "df-modal";
 
-      function keyCloseListener(evt) {
+      function goForward() {
+        const currentScroll = modal.scrollTop;
+
+        // Find the first image whose offset from the top is more than the
+        // current scroll top
+        const nodes = Array.from(modal.querySelectorAll(".df-img-wrapper"));
+
+        if (nodes.length > 1) {
+          const topPadding = nodes[0].offsetTop;
+          nodes.some((node, idx) => {
+            if (node.offsetTop > currentScroll + topPadding) {
+              modal.scrollTop = node.offsetTop - 40;
+              return true;
+            }
+            return false;
+          });
+        }
+      }
+
+      function goBack() {
+        const currentScroll = modal.scrollTop;
+
+        // Find the last image whose offset from the top is less than the
+        // current scroll top
+        const nodes = Array.from(modal.querySelectorAll(".df-img-wrapper"));
+        for (let i = nodes.length - 1; i > -1; i--) {
+          const node = nodes[i];
+          if (node.offsetTop < currentScroll) {
+            modal.scrollTop = node.offsetTop - 40;
+            return;
+          }
+        }
+      }
+
+      function keyListener(evt) {
+        const keyCode = evt.keyCode;
+        let prevent = false;
+
         // ESC key
-        if (evt.keyCode === 27) {
+        if (keyCode === 27) {
           removeModal();
+        } else if (keyCode === 37 || keyCode === 38) {
+          // LEFT and UP keys
+          goBack();
+          prevent = true;
+        } else if (keyCode === 39 || keyCode === 40) {
+          // RIGHT and DOWN keys
+          goForward();
+          prevent = true;
+        }
+
+        if (prevent) {
+          evt.preventDefault();
+          evt.stopPropagation();
         }
       }
 
       function removeModal() {
         modal.parentNode.removeChild(modal);
-        document.body.removeEventListener("keydown", keyCloseListener, false);
+        document.body.removeEventListener("keydown", keyListener, false);
       }
 
-      document.body.addEventListener("keydown", keyCloseListener, false);
+      document.body.addEventListener("keydown", keyListener, false);
 
       const images = urls.map(url => {
         const img = document.createElement("img");

@@ -117,6 +117,7 @@
   overflow-y: auto;
   text-align: center;
   padding-top: 40px;
+  z-index: 100;
 }
 
 .df-img-wrapper {
