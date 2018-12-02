@@ -1,14 +1,18 @@
 {
-  "name": "Daftie",
+  "name": "Dafty",
   "version": "1.0",
-  "description": "Additions for Daft.ie",
+  "description": "Unoffical improvements for Daft.ie",
   "manifest_version": 2,
-  "permissions": ["activeTab", "storage"],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "https://www.google-analytics.com/collect*"
+  ],
   "content_scripts": [
     {
       "matches": ["https://daft.ie/*", "https://www.daft.ie/*"],
       "css": ["index.css"],
-      "js": ["contentScript.js"]
+      "js": ["analytics.js", "contentScript.js"]
     }
   ]
 }

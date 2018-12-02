@@ -18,6 +18,10 @@ function insertAfter(newNode, afterNode) {
   }
 }
 
+function getTransactionType() {
+  return window.location.href.indexOf("for-sale") > -1 ? "sale" : "rent";
+}
+
 function findCards() {
   const buyLinks = Array.from(
     document.querySelectorAll(
@@ -25,8 +29,7 @@ function findCards() {
     )
   );
 
-  const transactionType =
-    window.location.href.indexOf("for-sale") > -1 ? "sale" : "rent";
+  const transactionType = getTransactionType();
 
   const buyCards = buyLinks.map(link => {
     const rootNode = findParentByClass(
@@ -178,6 +181,21 @@ function addCardControls(cardInfo, force) {
     showPhotos(cardInfo);
   });
 
+  const photoNodes = Array.from(
+    cardInfo.rootNode.querySelectorAll(
+      ".PropertyImage__propertyInfoContainer .PropertyImage__iconContainer,.image a"
+    )
+  );
+  photoNodes.forEach(photoNode => {
+    photoNode.addEventListener("click", evt => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      showPhotos(cardInfo);
+    });
+    photoNode.style.cursor = "pointer";
+    photoNode.title = "Show all photos for this property";
+  });
+
   const notesFrag = document.createElement("div");
   notesFrag.innerHTML = `
     <div class="df-notes-container${metadata.notes ? " shown" : ""}">
@@ -216,6 +234,7 @@ function updateHiddenState() {
 }
 
 function toggleHideCard(cardInfo) {
+  sendEvent("action", "hide");
   const metadata = getMetadata(cardInfo);
   metadata.hidden = !metadata.hidden;
   hideCards();
@@ -233,6 +252,8 @@ function toggleDetails(cardInfo) {
   let detailsNode = cardInfo.extraDetailsNode;
 
   if (!detailsNode) {
+    sendEvent("action", "show_details");
+
     cardInfo.extraDetailsNode = detailsNode = document.createElement("div");
     detailsNode.innerHTML = "Loading ...";
     detailsNode.className = "df-details-container";
@@ -261,6 +282,7 @@ function showPhotos(cardInfo) {
       frag.querySelectorAll("#pbxl_photo_carousel ul li img")
     ).map(img => img.src);
 
+    sendEvent("action", "show_photos", null, urls.length);
     if (urls.length > 0) {
       const modal = document.createElement("div");
       modal.className = "df-modal";
@@ -376,6 +398,8 @@ function showPhotos(cardInfo) {
 }
 
 function saveNotes(cardInfo, textValue, skipServerSave) {
+  sendEvent("action", "save_note");
+
   const metadata = getMetadata(cardInfo);
   metadata.notes = textValue;
   writeStorage();
@@ -770,6 +794,7 @@ function storeNoteFromDaftForm() {
 }
 
 if (isSupportedPageType()) {
+  sendEvent("lifecycle", "load", getTransactionType());
   readStorage(findCards(), () => {
     initCards();
     hideCards();
