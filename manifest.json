@@ -1,6 +1,6 @@
 {
   "name": "Dafty",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Unoffical improvements for Daft.ie",
   "manifest_version": 2,
   "permissions": ["activeTab", "storage", "https://www.google-analytics.com/collect*"],

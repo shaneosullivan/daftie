@@ -390,6 +390,7 @@ function showMap(cardInfo) {
   // It'd be nice to insert the map page in an iframe, but they do an annoying redirect in this case,
   // and attempts to block it with the 'sandbox' attribute cause the page itself to fail for
   // some reason.  So, let's go with the backup option of a popup window.
+  sendEvent('action', 'show_map');
   window.open(
     cardInfo.href + '?df-map-view=1',
     'df-map',
