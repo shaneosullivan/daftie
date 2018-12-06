@@ -1,14 +1,21 @@
 // This script is only run on a page that has "df-map-view=1" in the url.
 // It hides everything except the map on a page, for display in a popup
 function showOnlyMapOnPage() {
-  const mapNode = document.getElementById('smi_map_holder');
-  const mapNodeLink = document.getElementById('smi-map-link');
+  const mapNodeLink =
+    document.getElementById('smi-map-link') || document.querySelector('.PropertyFacilities__map');
 
-  if (!mapNode || !mapNodeLink) {
+  if (!mapNodeLink) {
     return;
   }
 
   mapNodeLink.click();
+
+  const mapNode =
+    document.getElementById('smi_map_holder') || document.getElementById('MapProperty');
+
+  if (!mapNode) {
+    return;
+  }
 
   let node = mapNode;
 
@@ -29,7 +36,7 @@ function showOnlyMapOnPage() {
     node = node.parentNode;
   }
 
-  const mapWrapper = document.getElementById('smi-tab-map');
+  const mapWrapper = document.getElementById('smi-tab-map') || mapNode;
   const size = mapWrapper.getBoundingClientRect();
 
   // Make the body the same dimensions as the map.

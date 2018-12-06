@@ -393,7 +393,7 @@ function showMap(cardInfo) {
   window.open(
     cardInfo.href + '?df-map-view=1',
     'df-map',
-    'width=610,height=900,resizable,scrollbars=yes,status=1'
+    'width=610,height=800,resizable,scrollbars=yes,status=1'
   );
 }
 

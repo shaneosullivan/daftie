@@ -6,8 +6,19 @@ body.df-map-only-page #smi-tab-map {
 
 body {
   visibility: hidden;
+  opacity: 0;
+  margin-left: -10000px !important;
 }
 
 body.df-map-only-page {
   visibility: visible;
+  opacity: 1;
+  margin-left: 0px !important;
+}
+
+body.df-map-only-page .PropertyDetailsPage__propertyDetailsContainer {
+  width: 610px;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
