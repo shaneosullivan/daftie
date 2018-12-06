@@ -1,0 +1,13 @@
+body.df-map-only-page #smi-tab-map {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+body {
+  visibility: hidden;
+}
+
+body.df-map-only-page {
+  visibility: visible;
+}

@@ -19,25 +19,22 @@ function insertAfter(newNode, afterNode) {
 }
 
 function getTransactionType() {
-  return window.location.href.indexOf("for-sale") > -1 ? "sale" : "rent";
+  return window.location.href.indexOf('for-sale') > -1 ? 'sale' : 'rent';
 }
 
 function findCards() {
   const buyLinks = Array.from(
     document.querySelectorAll(
-      "#sr_content .PropertyCardContainer__container a.PropertyInformationCommonStyles__addressCopy--link"
+      '#sr_content .PropertyCardContainer__container a.PropertyInformationCommonStyles__addressCopy--link'
     )
   );
 
   const transactionType = getTransactionType();
 
   const buyCards = buyLinks.map(link => {
-    const rootNode = findParentByClass(
-      link,
-      "PropertyCardContainer__container"
-    );
+    const rootNode = findParentByClass(link, 'PropertyCardContainer__container');
     const detailsNode = rootNode.querySelector(
-      ".FeaturedCardPropertyInformation__detailsCopyContainer, .StandardPropertyInfo__detailsContainer, .StandardPropertyInfo__detailsContainerNoBranding"
+      '.FeaturedCardPropertyInformation__detailsCopyContainer, .StandardPropertyInfo__detailsContainer, .StandardPropertyInfo__detailsContainerNoBranding'
     );
 
     return {
@@ -53,14 +50,12 @@ function findCards() {
     return buyCards;
   }
 
-  const rentBoxes = Array.from(
-    document.querySelectorAll("#sr_content td > .box")
-  );
+  const rentBoxes = Array.from(document.querySelectorAll('#sr_content td > .box'));
 
   const rentCards = rentBoxes.map(box => {
     const rootNode = box;
-    const detailsNode = rootNode.querySelector(".text-block");
-    const linkNode = rootNode.querySelector(".search_result_title_box h2 a");
+    const detailsNode = rootNode.querySelector('.text-block');
+    const linkNode = rootNode.querySelector('.search_result_title_box h2 a');
 
     return {
       detailsNode,
@@ -78,8 +73,8 @@ function getPropertyId(cardInfo) {
   // Links look like
   // https://www.daft.ie/cork/houses-for-rent/ballineen/dromidclough-derrigra-ballineen-cork-1892028/
   // and the id is the last bit.
-  const parts = cardInfo.href.split("-");
-  return parts[parts.length - 1].split("/")[0];
+  const parts = cardInfo.href.split('-');
+  return parts[parts.length - 1].split('/')[0];
 }
 
 function findParentByClass(node, cls) {
@@ -93,13 +88,13 @@ function findParentByClass(node, cls) {
 }
 
 function addGlobalControls() {
-  const container = document.querySelector(".tabs-container .tabs-area");
+  const container = document.querySelector('.tabs-container .tabs-area');
 
   if (!container) {
     return;
   }
 
-  const cls = "df-global-controls";
+  const cls = 'df-global-controls';
   const existingNode = document.querySelector(`.${cls}`);
 
   // Regenerate the controls each time.  It's simpler than fiddling with each
@@ -115,30 +110,25 @@ function addGlobalControls() {
   });
 
   const toggleHiddenButton = `<button class="df-button df-toggle-hidden" ${
-    hiddenCount > 0 ? "" : 'disabled="true"'
+    hiddenCount > 0 ? '' : 'disabled="true"'
   }>${
-    globalControls.hiddenEnabled
-      ? `Show ${hiddenCount} hidden`
-      : `Hide ${hiddenCount}`
+    globalControls.hiddenEnabled ? `Show ${hiddenCount} hidden` : `Hide ${hiddenCount}`
   }</button>`;
 
   const controls = `<div class="df-global-controls">
     ${toggleHiddenButton}
    </div>`;
 
-  const frag = document.createElement("div");
+  const frag = document.createElement('div');
   frag.innerHTML = controls;
-  frag
-    .querySelector(".df-toggle-hidden")
-    .addEventListener("click", toggleHidden, false);
+  frag.querySelector('.df-toggle-hidden').addEventListener('click', toggleHidden, false);
 
   container.appendChild(frag);
 }
 
 function addCardControls(cardInfo, force) {
   const sibling = cardInfo.rootNode.nextElementSibling;
-  const existingNode =
-    sibling && sibling.getAttribute("data-df") === "controls" ? sibling : null;
+  const existingNode = sibling && sibling.getAttribute('data-df') === 'controls' ? sibling : null;
 
   if (existingNode) {
     // Already added
@@ -151,63 +141,65 @@ function addCardControls(cardInfo, force) {
   const metadata = getMetadata(cardInfo);
 
   const controls = `<div class="df-card-controls">
-      <button class="df-button df-hide">${
-        metadata.hidden ? "Unhide" : "Hide"
-      }</button>
+      <button class="df-button df-hide">${metadata.hidden ? 'Unhide' : 'Hide'}</button>
       <button class="df-button df-notes">Notes</button>
       <button class="df-button df-details">Show Details</button>
       <button class="df-button df-photos">Show Photos</button>
+      <button class="df-button df-map">Show Map</button>
      </div>`;
 
-  const frag = document.createElement("div");
-  frag.setAttribute("data-df", "controls");
-  frag.className = "df-controls-wrapper";
+  const frag = document.createElement('div');
+  frag.setAttribute('data-df', 'controls');
+  frag.className = 'df-controls-wrapper';
   frag.innerHTML = controls;
 
-  frag.querySelector(".df-hide").addEventListener("click", () => {
+  frag.querySelector('.df-hide').addEventListener('click', () => {
     toggleHideCard(cardInfo);
   });
 
-  frag.querySelector(".df-notes").addEventListener("click", () => {
+  frag.querySelector('.df-notes').addEventListener('click', () => {
     toggleNotes(cardInfo);
   });
 
-  frag.querySelector(".df-details").addEventListener("click", evt => {
+  frag.querySelector('.df-details').addEventListener('click', evt => {
     const isShown = toggleDetails(cardInfo);
-    evt.target.textContent = isShown ? "Hide Details" : "Show Details";
+    evt.target.textContent = isShown ? 'Hide Details' : 'Show Details';
   });
 
-  frag.querySelector(".df-photos").addEventListener("click", () => {
+  frag.querySelector('.df-photos').addEventListener('click', () => {
     showPhotos(cardInfo);
+  });
+
+  frag.querySelector('.df-map').addEventListener('click', evt => {
+    showMap(cardInfo);
   });
 
   const photoNodes = Array.from(
     cardInfo.rootNode.querySelectorAll(
-      ".PropertyImage__propertyInfoContainer .PropertyImage__iconContainer,.image a"
+      '.PropertyImage__propertyInfoContainer .PropertyImage__iconContainer,.image a'
     )
   );
   photoNodes.forEach(photoNode => {
-    photoNode.addEventListener("click", evt => {
+    photoNode.addEventListener('click', evt => {
       evt.preventDefault();
       evt.stopPropagation();
       showPhotos(cardInfo);
     });
-    photoNode.style.cursor = "pointer";
-    photoNode.title = "Show all photos for this property";
+    photoNode.style.cursor = 'pointer';
+    photoNode.title = 'Show all photos for this property';
   });
 
-  const notesFrag = document.createElement("div");
+  const notesFrag = document.createElement('div');
   notesFrag.innerHTML = `
-    <div class="df-notes-container${metadata.notes ? " shown" : ""}">
+    <div class="df-notes-container${metadata.notes ? ' shown' : ''}">
       <div class="df-notes-inner">
         <textarea class="df-notes-text${
-          metadata.notes ? " shown" : ""
-        }" rows="3" cols="80" placeholder="Enter notes here">${metadata.notes ||
-    ""}</textarea>
+          metadata.notes ? ' shown' : ''
+        }" rows="3" cols="80" placeholder="Enter notes here">${metadata.notes || ''}</textarea>
       </div>
     </div>`;
 
-  notesFrag.querySelector(".df-notes-text").addEventListener("change", evt => {
+  notesFrag.querySelector('.df-notes-text').addEventListener('change', evt => {
     saveNotes(cardInfo, evt.target.value);
   });
 
@@ -228,13 +220,11 @@ function toggleHidden() {
 }
 
 function updateHiddenState() {
-  document.body.classList[globalControls.hiddenEnabled ? "remove" : "add"](
-    "df-hidden-disabled"
-  );
+  document.body.classList[globalControls.hiddenEnabled ? 'remove' : 'add']('df-hidden-disabled');
 }
 
 function toggleHideCard(cardInfo) {
-  sendEvent("action", "hide");
+  sendEvent('action', 'hide');
   const metadata = getMetadata(cardInfo);
   metadata.hidden = !metadata.hidden;
   hideCards();
@@ -245,22 +235,21 @@ function toggleHideCard(cardInfo) {
 
 function toggleNotes(cardInfo) {
   const notesNode = cardInfo.notesNode;
-  notesNode.classList.toggle("shown");
+  notesNode.classList.toggle('shown');
 }
 
 function toggleDetails(cardInfo) {
   let detailsNode = cardInfo.extraDetailsNode;
 
   if (!detailsNode) {
-    sendEvent("action", "show_details");
+    sendEvent('action', 'show_details');
 
-    cardInfo.extraDetailsNode = detailsNode = document.createElement("div");
-    detailsNode.innerHTML = "Loading ...";
-    detailsNode.className = "df-details-container";
+    cardInfo.extraDetailsNode = detailsNode = document.createElement('div');
+    detailsNode.innerHTML = 'Loading ...';
+    detailsNode.className = 'df-details-container';
     cardInfo.controlsNode.appendChild(cardInfo.extraDetailsNode);
 
-    const errMsg =
-      "Sorry, something went wrong, we could not get the property details";
+    const errMsg = 'Sorry, something went wrong, we could not get the property details';
 
     fetchPropertyDetails(cardInfo)
       .then(content => {
@@ -271,28 +260,28 @@ function toggleDetails(cardInfo) {
       });
   }
 
-  cardInfo.extraDetailsNode.classList.toggle("shown");
-  return cardInfo.extraDetailsNode.classList.contains("shown");
+  cardInfo.extraDetailsNode.classList.toggle('shown');
+  return cardInfo.extraDetailsNode.classList.contains('shown');
 }
 
 function showPhotos(cardInfo) {
   fetchPageBody(cardInfo).then(frag => {
     // Find list of photo images from the HTML for the carousel in the page.
-    const urls = Array.from(
-      frag.querySelectorAll("#pbxl_photo_carousel ul li img")
-    ).map(img => img.src);
+    const urls = Array.from(frag.querySelectorAll('#pbxl_photo_carousel ul li img')).map(
+      img => img.src
+    );
 
-    sendEvent("action", "show_photos", null, urls.length);
+    sendEvent('action', 'show_photos', null, urls.length);
     if (urls.length > 0) {
-      const modal = document.createElement("div");
-      modal.className = "df-modal";
+      const modal = document.createElement('div');
+      modal.className = 'df-modal';
 
       function goForward() {
         const currentScroll = modal.scrollTop;
 
         // Find the first image whose offset from the top is more than the
         // current scroll top
-        const nodes = Array.from(modal.querySelectorAll(".df-img-wrapper"));
+        const nodes = Array.from(modal.querySelectorAll('.df-img-wrapper'));
 
         if (nodes.length > 1) {
           const topPadding = nodes[0].offsetTop;
@@ -311,7 +300,7 @@ function showPhotos(cardInfo) {
 
         // Find the last image whose offset from the top is less than the
         // current scroll top
-        const nodes = Array.from(modal.querySelectorAll(".df-img-wrapper"));
+        const nodes = Array.from(modal.querySelectorAll('.df-img-wrapper'));
         for (let i = nodes.length - 1; i > -1; i--) {
           const node = nodes[i];
           if (node.offsetTop < currentScroll) {
@@ -346,21 +335,21 @@ function showPhotos(cardInfo) {
 
       function removeModal() {
         modal.parentNode.removeChild(modal);
-        document.body.removeEventListener("keydown", keyListener, false);
+        document.body.removeEventListener('keydown', keyListener, false);
       }
 
       function unhideImage(evt) {
-        evt.target.classList.add("unhidden");
+        evt.target.classList.add('unhidden');
       }
 
-      document.body.addEventListener("keydown", keyListener, false);
+      document.body.addEventListener('keydown', keyListener, false);
 
       const images = urls.map(url => {
-        const img = document.createElement("img");
+        const img = document.createElement('img');
         img.src = url;
-        img.className = "df-img";
+        img.className = 'df-img';
 
-        img.addEventListener("load", unhideImage);
+        img.addEventListener('load', unhideImage);
         return img;
       });
 
@@ -375,17 +364,17 @@ function showPhotos(cardInfo) {
       modal.innerHTML = closeContainer;
 
       images.forEach(img => {
-        const div = document.createElement("div");
+        const div = document.createElement('div');
         div.appendChild(img);
-        div.className = "df-img-wrapper";
+        div.className = 'df-img-wrapper';
 
         modal.appendChild(div);
       });
 
       modal.addEventListener(
-        "click",
+        'click',
         evt => {
-          if (evt.target.tagName !== "IMG") {
+          if (evt.target.tagName !== 'IMG') {
             removeModal();
           }
         },
@@ -397,8 +386,19 @@ function showPhotos(cardInfo) {
   });
 }
 
+function showMap(cardInfo) {
+  // It'd be nice to insert the map page in an iframe, but they do an annoying redirect in this case,
+  // and attempts to block it with the 'sandbox' attribute cause the page itself to fail for
+  // some reason.  So, let's go with the backup option of a popup window.
+  window.open(
+    cardInfo.href + '?df-map-view=1',
+    'df-map',
+    'width=610,height=900,resizable,scrollbars=yes,status=1'
+  );
+}
+
 function saveNotes(cardInfo, textValue, skipServerSave) {
-  sendEvent("action", "save_note");
+  sendEvent('action', 'save_note');
 
   const metadata = getMetadata(cardInfo);
   metadata.notes = textValue;
@@ -408,14 +408,14 @@ function saveNotes(cardInfo, textValue, skipServerSave) {
     const propertyId = getPropertyId(cardInfo);
 
     var formData = new FormData();
-    formData.append("action", "update_note");
-    formData.append("note", textValue);
-    formData.append("adId", propertyId);
-    formData.append("adType", cardInfo.transactionType);
+    formData.append('action', 'update_note');
+    formData.append('note', textValue);
+    formData.append('adId', propertyId);
+    formData.append('adType', cardInfo.transactionType);
 
     // Try to save the note to the server for the user too!
-    fetch("/my-daft/ajax/saved-ads/", {
-      method: "POST",
+    fetch('/my-daft/ajax/saved-ads/', {
+      method: 'POST',
       body: formData
     });
   }
@@ -424,14 +424,14 @@ function saveNotes(cardInfo, textValue, skipServerSave) {
 function hideCards() {
   const cards = findCards();
   cards.forEach(cardInfo => {
-    cardInfo.rootNode.classList[
-      getMetadata(cardInfo).hidden === true ? "add" : "remove"
-    ]("df-hidden");
+    cardInfo.rootNode.classList[getMetadata(cardInfo).hidden === true ? 'add' : 'remove'](
+      'df-hidden'
+    );
   });
 }
 
 function addChangeListener() {
-  const cardContainer = document.querySelector(".sr_content");
+  const cardContainer = document.querySelector('.sr_content');
 
   if (cardContainer) {
     // Options for the observer (which mutations to observe)
@@ -468,7 +468,7 @@ function getStorageKey(cardInfo) {
 }
 
 function getGlobalControlKeys() {
-  return Object.keys(globalControls).map(key => "globalControls." + key);
+  return Object.keys(globalControls).map(key => 'globalControls.' + key);
 }
 
 function readStorage(cards, callback) {
@@ -488,8 +488,8 @@ function readStorage(cards, callback) {
     possiblyCallback();
   });
 
-  chrome.storage.local.get(["global-controls"], function(result) {
-    const storedGlobalControls = result && result["global-controls"];
+  chrome.storage.local.get(['global-controls'], function(result) {
+    const storedGlobalControls = result && result['global-controls'];
     if (storedGlobalControls) {
       Object.keys(storedGlobalControls).forEach(key => {
         globalControls[key] = storedGlobalControls[key];
@@ -509,7 +509,7 @@ function writeStorage(callback) {
       obj[key] = propertyMetadata[key];
     }
   });
-  obj["global-controls"] = globalControls;
+  obj['global-controls'] = globalControls;
 
   chrome.storage.local.set(obj, function() {
     callback && callback();
@@ -517,18 +517,18 @@ function writeStorage(callback) {
 }
 
 function autoExpandPropertyDescription() {
-  const node = document.querySelector(".ExpandMoreIndicator__expandLinkText");
+  const node = document.querySelector('.ExpandMoreIndicator__expandLinkText');
   if (node) {
     node.click();
   }
 }
 
 function getCardIndex(node) {
-  const counterNode = node.querySelector(".sr_counter");
+  const counterNode = node.querySelector('.sr_counter');
   if (counterNode) {
     const text = counterNode.textContent
-      .split(".")
-      .join("")
+      .split('.')
+      .join('')
       .trim();
     return parseInt(text, 10);
   }
@@ -536,12 +536,10 @@ function getCardIndex(node) {
 }
 
 function getPageLinks() {
-  const nodes = document.querySelectorAll(
-    ".paging li:not(.next_page):not(.prev_page) a"
-  );
+  const nodes = document.querySelectorAll('.paging li:not(.next_page):not(.prev_page) a');
   return Array.from(nodes)
     .filter(node => {
-      return node.textContent !== "...";
+      return node.textContent !== '...';
     })
     .map(node => {
       return { node, link: node.href };
@@ -550,9 +548,9 @@ function getPageLinks() {
 
 function fixUpImageScript(script) {
   script = script
-    .split("\n")
+    .split('\n')
     .map(line => {
-      if (line.indexOf("imgEl.attr(") > 0) {
+      if (line.indexOf('imgEl.attr(') > 0) {
         const parts = line.split("'");
         if (parts.length > 5) {
           // There's too many apostrophes, somehow they got unescaped, e.g.
@@ -561,13 +559,13 @@ function fixUpImageScript(script) {
           // The first three parts are fine, as is the last part
           const firstPart = parts.slice(0, 3).join("'");
           const lastPart = parts[parts.length - 1];
-          const middlePart = parts.slice(3, parts.length - 1).join("&#039;");
+          const middlePart = parts.slice(3, parts.length - 1).join('&#039;');
           return [firstPart, middlePart, lastPart].join("'");
         }
       }
       return line;
     })
-    .join("\n");
+    .join('\n');
   return `try{${script}}catch(e){}`;
 }
 
@@ -624,15 +622,15 @@ function prefetchPages() {
           // Avoid inserting too many scripts on the page.  At least in older
           // browsers there was an annoying limit (39?) of how many you could
           // insert dynamically.  Call me old fashioned, but let's clean up...
-          const existingScriptNode = document.getElementById("df-script");
+          const existingScriptNode = document.getElementById('df-script');
           if (existingScriptNode) {
             existingScriptNode.parentNode.removeChild(existingScriptNode);
           }
 
           // Make a new script node
-          const scriptNode = document.createElement("script");
-          scriptNode.setAttribute("id", "df-script");
-          scriptNode.setAttribute("type", "text/javascript");
+          const scriptNode = document.createElement('script');
+          scriptNode.setAttribute('id', 'df-script');
+          scriptNode.setAttribute('type', 'text/javascript');
           scriptNode.textContent = scriptContent;
           document.body.appendChild(scriptNode);
         } else {
@@ -643,19 +641,17 @@ function prefetchPages() {
       // Set an interval go through the lazily loaded images and add their
       // images bit by bit
       const lazyInterval = setInterval(() => {
-        const lazyImages = Array.from(
-          document.querySelectorAll("img.lazy[data-original]")
-        );
+        const lazyImages = Array.from(document.querySelectorAll('img.lazy[data-original]'));
 
         let counter = 0;
         if (lazyImages.length > 0) {
           lazyImages.some((img, idx) => {
-            const url = img.getAttribute("data-original");
+            const url = img.getAttribute('data-original');
             if (url) {
               img.src = url;
               // Remove the data-original attribute so this node doesn't show up
               // in the query any more
-              img.removeAttribute("data-original");
+              img.removeAttribute('data-original');
               counter++;
             }
             return counter > 10;
@@ -669,22 +665,20 @@ function prefetchPages() {
       }, 1000);
 
       // Move the paging node back to the bottom
-      const pagingNode = document.querySelector("ul.paging");
+      const pagingNode = document.querySelector('ul.paging');
       pagingNode.parentNode.appendChild(pagingNode);
 
-      const prevLink = pagingNode.querySelector("li.prev_page + li a");
-      const nextLinkOld = pagingNode.querySelector("li.next_page");
-      const nextLink = nextLinkOld
-        ? nextLinkOld.previousElementSibling.querySelector("a")
-        : null;
+      const prevLink = pagingNode.querySelector('li.prev_page + li a');
+      const nextLinkOld = pagingNode.querySelector('li.next_page');
+      const nextLink = nextLinkOld ? nextLinkOld.previousElementSibling.querySelector('a') : null;
 
-      if (prevLink && prevLink.textContent === "...") {
-        prevLink.textContent = "Previous";
-        prevLink.parentNode.style.display = "inline-block";
+      if (prevLink && prevLink.textContent === '...') {
+        prevLink.textContent = 'Previous';
+        prevLink.parentNode.style.display = 'inline-block';
       }
-      if (nextLink && nextLink.textContent === "...") {
-        nextLink.textContent = "Next";
-        nextLink.parentNode.style.display = "inline-block";
+      if (nextLink && nextLink.textContent === '...') {
+        nextLink.textContent = 'Next';
+        nextLink.parentNode.style.display = 'inline-block';
       }
     }
   });
@@ -692,10 +686,10 @@ function prefetchPages() {
 
 function sanitizeHtml(html) {
   return html
-    .split("<script")
-    .join("<notscript")
-    .split("</script")
-    .join("</notscript");
+    .split('<script')
+    .join('<notscript')
+    .split('</script')
+    .join('</notscript');
 }
 
 function fetchPageBody(cardInfo) {
@@ -706,7 +700,7 @@ function fetchPageBody(cardInfo) {
       .then(resp => resp.text())
       .then(html => sanitizeHtml(html))
       .then(html => {
-        const frag = document.createElement("div");
+        const frag = document.createElement('div');
         frag.innerHTML = html;
         cardInfo.pageContentNode = frag;
         return frag;
@@ -716,24 +710,22 @@ function fetchPageBody(cardInfo) {
 
 function getBodyContent(html) {
   // Find the body tag
-  const bodyStartIdx = html.indexOf("<body");
-  const bodyEndIdx = html.indexOf("</body");
+  const bodyStartIdx = html.indexOf('<body');
+  const bodyEndIdx = html.indexOf('</body');
   const bodyOuterContent = html.substring(bodyStartIdx, bodyEndIdx);
-  const bodyContent = bodyOuterContent.substring(
-    bodyOuterContent.indexOf(">") + 1
-  );
+  const bodyContent = bodyOuterContent.substring(bodyOuterContent.indexOf('>') + 1);
   return bodyContent;
 }
 
 function fetchPropertyDetails(cardInfo) {
   return fetchPageBody(cardInfo).then(frag => {
     const propertyDetailsNodes = frag.querySelectorAll(
-      ".PropertyDescription__propertyDescription, .PropertyFeatures__featuresList, #smi-tab-overview"
+      '.PropertyDescription__propertyDescription, .PropertyFeatures__featuresList, #smi-tab-overview'
     );
     if (propertyDetailsNodes) {
       return Array.from(propertyDetailsNodes)
         .map(node => node.innerHTML)
-        .join("<br />");
+        .join('<br />');
     } else {
       return null;
     }
@@ -742,15 +734,15 @@ function fetchPropertyDetails(cardInfo) {
 
 function extractPageContent(html) {
   const bodyContent = getBodyContent(html);
-  const frag = document.createElement("div");
+  const frag = document.createElement('div');
   frag.innerHTML = bodyContent;
 
-  let buyCards = frag.querySelectorAll(".PropertyCardContainer__container");
+  let buyCards = frag.querySelectorAll('.PropertyCardContainer__container');
   let cards = [];
   if (buyCards.length > 0) {
     cards = Array.from(buyCards);
   } else {
-    let rentCards = frag.querySelectorAll("#sr_content .box");
+    let rentCards = frag.querySelectorAll('#sr_content .box');
     cards = Array.from(rentCards);
   }
 
@@ -761,7 +753,7 @@ function extractPageContent(html) {
     // We have to collect the contents of the script tags that follow each
     // card, as they initialize the image for the card.  Weird how they don't
     // just output that in the html, but here we are....
-    if (scriptNode.tagName.toLowerCase() === "notscript") {
+    if (scriptNode.tagName.toLowerCase() === 'notscript') {
       scripts.push(scriptNode.textContent);
     }
   });
@@ -779,13 +771,13 @@ function isSupportedPageType() {
 // When the user saves a note using the Daft native notes tools, also save it
 // locally so we can stay in sync
 function storeNoteFromDaftForm() {
-  const saveButton = document.getElementById("save_note");
-  const textarea = document.querySelector("textarea#modal_note");
+  const saveButton = document.getElementById('save_note');
+  const textarea = document.querySelector('textarea#modal_note');
   if (saveButton && textarea) {
     saveButton.addEventListener(
-      "click",
+      'click',
       evt => {
-        const href = "https://www.daft.ie" + window.location.pathname;
+        const href = 'https://www.daft.ie' + window.location.pathname;
         saveNotes({ href }, textarea.value.trim(), true);
       },
       true
@@ -794,7 +786,7 @@ function storeNoteFromDaftForm() {
 }
 
 if (isSupportedPageType()) {
-  sendEvent("lifecycle", "load", getTransactionType());
+  sendEvent('lifecycle', 'load', getTransactionType());
   readStorage(findCards(), () => {
     initCards();
     hideCards();
