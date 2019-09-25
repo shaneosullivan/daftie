@@ -2,16 +2,20 @@
 // It hides everything except the map on a page, for display in a popup
 function showOnlyMapOnPage() {
   const mapNodeLink =
-    document.getElementById('smi-map-link') || document.querySelector('.PropertyFacilities__map');
+    document.getElementById("smi-map-link") ||
+    document.querySelector(".PropertyFacilities__map");
 
-  if (!mapNodeLink) {
+  let mapNode = document.getElementById("MapContainer");
+  if (!mapNodeLink && !mapNode) {
     return;
   }
 
-  mapNodeLink.click();
+  mapNodeLink && mapNodeLink.click();
 
-  const mapNode =
-    document.getElementById('smi_map_holder') || document.getElementById('MapProperty');
+  mapNode =
+    mapNode ||
+    document.getElementById("smi_map_holder") ||
+    document.getElementById("MapProperty");
 
   if (!mapNode) {
     return;
@@ -36,13 +40,13 @@ function showOnlyMapOnPage() {
     node = node.parentNode;
   }
 
-  const mapWrapper = document.getElementById('smi-tab-map') || mapNode;
+  const mapWrapper = document.getElementById("smi-tab-map") || mapNode;
   const size = mapWrapper.getBoundingClientRect();
 
   // Make the body the same dimensions as the map.
-  document.body.style.height = size.height + 'px';
-  document.body.style.width = size.width + 'px';
-  document.body.classList.add('df-map-only-page');
+  document.body.style.height = size.height + "px";
+  document.body.style.width = size.width + "px";
+  document.body.classList.add("df-map-only-page");
 }
 
 showOnlyMapOnPage();
