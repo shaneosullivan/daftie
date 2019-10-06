@@ -69,7 +69,16 @@ function findCards() {
     const detailsNode = rootNode.querySelector(".text-block");
     const linkNode = rootNode.querySelector(".search_result_title_box h2 a");
 
+    const addressNode = rootNode.querySelector(".search_result_title_box h2 a");
+    let address = addressNode
+      ? addressNode.textContent
+          .toLowerCase()
+          .split("-")[0]
+          .trim()
+      : "";
+
     return {
+      address,
       detailsNode,
       href: linkNode.href,
       linkNode,
@@ -512,7 +521,7 @@ function hideCards() {
   cards.forEach(cardInfo => {
     let metadata = getMetadata(cardInfo);
     let hidden = metadata.hidden === true;
-    if (!hidden) {
+    if (!hidden && cardInfo.address) {
       hidden = globalControls.hideList.some(token => {
         const idx = cardInfo.address.indexOf(token);
         return idx > -1;
