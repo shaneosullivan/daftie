@@ -164,3 +164,15 @@ ul.paging li {
 notscript {
   display: none;
 }
+
+.df-input-wrapper {
+  margin-left: 16px;
+}
+
+#df-hide-input {
+  width: 200px;
+}
+
+.df-hide-area {
+  float: right;
+}
