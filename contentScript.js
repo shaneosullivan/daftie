@@ -3,7 +3,7 @@ let hiddenCardsCount = 0;
 
 const globalControls = {
   hiddenEnabled: true,
-  hideList: []
+  hideList: [],
 };
 
 function refreshUI() {
@@ -24,70 +24,101 @@ function getTransactionType() {
   return window.location.href.indexOf("for-sale") > -1 ? "sale" : "rent";
 }
 
+/**
+ * Finds and extracts property card information.
+ *
+ * This function searches the DOM for property listing cards and extracts relevant
+ * information using data-testid and data-tracking attributes. It provides
+ * a structured way to access property details including address, price, metadata,
+ * and navigation elements.
+ *
+ * @returns {Array<Object>} Array of card objects with the following properties:
+ *   @property {string} id - The property ID from the URL/data-testid
+ *   @property {string} address - The property's full address text
+ *   @property {string} href - The full URL to the property
+ *   @property {Object} metadata - Property metadata
+ *    @property {number} beds - Number of bedrooms (as integer)
+ *    @property {number} baths - Number of bathrooms (as integer)
+ *    @property {number} size - Property size in square meters (as integer)
+ *    @property {string} type - Property type (e.g., "Detached", "Semi-D")
+ *   @property {string} price - The property price text
+ *   @property {Element} rootNode - Reference to the main card DOM element
+ *   @property {Element} detailsNode - Reference to the details container DOM element
+ *   @property {Element} linkNode - Reference to the main card link element
+ *   @property {string} transactionType - Either "sale" or "rent" based on URL
+ */
 function findCards() {
-  const buyLinks = Array.from(
-    document.querySelectorAll(
-      "#sr_content .PropertyCardContainer__container a.PropertyInformationCommonStyles__addressCopy--link"
-    )
+  // Find all property cards using the consistent data-testid attribute
+  const cardElements = Array.from(
+    document.querySelectorAll('[data-testid^="result-"]')
   );
 
-  const transactionType = getTransactionType();
+  const transactionType =
+    window.location.href.indexOf("for-sale") > -1 ? "sale" : "rent";
 
-  const buyCards = buyLinks.map(link => {
-    const rootNode = findParentByClass(
-      link,
-      "PropertyCardContainer__container"
+  return cardElements.map((cardElement) => {
+    const linkNode = cardElement.querySelector("a");
+    const detailsContainer = cardElement.querySelector(
+      '[data-testid="card-container"]'
     );
-    const detailsNode = rootNode.querySelector(
-      ".FeaturedCardPropertyInformation__detailsCopyContainer, .StandardPropertyInfo__detailsContainer, .StandardPropertyInfo__detailsContainerNoBranding"
+    const addressNode = cardElement.querySelector(
+      '[data-tracking="srp_address"]'
     );
-    const addressNode = detailsNode.querySelector(
-      ".PropertyInformationCommonStyles__addressCopy--link"
+    const priceNode = cardElement.querySelector('[data-tracking="srp_price"]');
+    const metadataNode = cardElement.querySelector(
+      '[data-tracking="srp_meta"]'
     );
-    let address = addressNode ? addressNode.textContent.toLowerCase() : "";
+
+    // Extract property ID from either the data-testid or URL
+    const id = cardElement.getAttribute("data-testid").split("-")[1];
+
+    // Extract metadata from spans
+    const metadataSpans = Array.from(
+      metadataNode?.querySelectorAll(".sc-5d364562-1 span") || []
+    );
+
+    /**
+     *
+     * @param {string} text
+     * @returns {number}
+     */
+    function splitAndConvert(text) {
+      return parseInt(text.split(" ")[0]);
+    }
+
+    const propertyMetadata = {
+      beds: 0,
+      baths: 0,
+      size: 0,
+      type: "",
+    };
+
+    for (let i = 0; i < metadataSpans.length; i++) {
+      const span = metadataSpans[i];
+      const text = span?.textContent || "";
+      if (text.includes("Bed")) {
+        propertyMetadata.beds = splitAndConvert(text);
+      } else if (text.includes("Bath")) {
+        propertyMetadata.baths = splitAndConvert(text);
+      } else if (text.includes("m²")) {
+        propertyMetadata.size = splitAndConvert(text);
+      } else {
+        propertyMetadata.type = text;
+      }
+    }
 
     return {
-      address,
-      detailsNode,
-      href: link.href,
-      linkNode: link,
-      rootNode,
-      transactionType
+      id,
+      address: addressNode?.textContent?.toLowerCase().trim() || "",
+      href: linkNode?.href || "",
+      metadata: propertyMetadata,
+      price: priceNode?.textContent?.trim() || "",
+      rootNode: cardElement,
+      detailsNode: detailsContainer,
+      linkNode: linkNode,
+      transactionType,
     };
   });
-
-  if (buyLinks.length > 0) {
-    return buyCards;
-  }
-
-  const rentBoxes = Array.from(
-    document.querySelectorAll("#sr_content td > .box")
-  );
-
-  const rentCards = rentBoxes.map(box => {
-    const rootNode = box;
-    const detailsNode = rootNode.querySelector(".text-block");
-    const linkNode = rootNode.querySelector(".search_result_title_box h2 a");
-
-    const addressNode = rootNode.querySelector(".search_result_title_box h2 a");
-    let address = addressNode
-      ? addressNode.textContent
-          .toLowerCase()
-          .split("-")[0]
-          .trim()
-      : "";
-
-    return {
-      address,
-      detailsNode,
-      href: linkNode.href,
-      linkNode,
-      rootNode,
-      transactionType
-    };
-  });
-
-  return rentCards;
 }
 
 function getPropertyId(cardInfo) {
@@ -212,7 +243,7 @@ function addCardControls(cardInfo, force) {
     toggleNotes(cardInfo);
   });
 
-  frag.querySelector(".df-details").addEventListener("click", evt => {
+  frag.querySelector(".df-details").addEventListener("click", (evt) => {
     const isShown = toggleDetails(cardInfo);
     evt.target.textContent = isShown ? "Hide Details" : "Show Details";
   });
@@ -221,14 +252,14 @@ function addCardControls(cardInfo, force) {
     showPhotos(cardInfo);
   });
 
-  frag.querySelector(".df-map").addEventListener("click", evt => {
+  frag.querySelector(".df-map").addEventListener("click", (evt) => {
     showMap(cardInfo);
   });
 
   const hideAreaButton = frag.querySelector(".df-hide-area");
 
   hideAreaButton &&
-    hideAreaButton.addEventListener("click", evt => {
+    hideAreaButton.addEventListener("click", (evt) => {
       addToHideAreaList(areaName);
     });
 
@@ -237,8 +268,8 @@ function addCardControls(cardInfo, force) {
       ".PropertyImage__propertyInfoContainer .PropertyImage__iconContainer,.image a"
     )
   );
-  photoNodes.forEach(photoNode => {
-    photoNode.addEventListener("click", evt => {
+  photoNodes.forEach((photoNode) => {
+    photoNode.addEventListener("click", (evt) => {
       evt.preventDefault();
       evt.stopPropagation();
       showPhotos(cardInfo);
@@ -253,14 +284,17 @@ function addCardControls(cardInfo, force) {
       <div class="df-notes-inner">
         <textarea class="df-notes-text${
           metadata.notes ? " shown" : ""
-        }" rows="3" cols="80" placeholder="Enter notes here">${metadata.notes ||
-    ""}</textarea>
+        }" rows="3" cols="80" placeholder="Enter notes here">${
+    metadata.notes || ""
+  }</textarea>
       </div>
     </div>`;
 
-  notesFrag.querySelector(".df-notes-text").addEventListener("change", evt => {
-    saveNotes(cardInfo, evt.target.value);
-  });
+  notesFrag
+    .querySelector(".df-notes-text")
+    .addEventListener("change", (evt) => {
+      saveNotes(cardInfo, evt.target.value);
+    });
 
   // cardInfo.detailsNode.appendChild(frag);
   insertAfter(frag, cardInfo.rootNode);
@@ -280,7 +314,7 @@ function toggleHidden() {
 
 function updateHideList(evt) {
   const hideList = evt.target.value;
-  const tokens = hideList.split(",").map(item => item.trim().toLowerCase());
+  const tokens = hideList.split(",").map((item) => item.trim().toLowerCase());
 
   globalControls.hideList = tokens;
   writeStorage();
@@ -289,11 +323,10 @@ function updateHideList(evt) {
 
 function addToHideAreaList(areaName) {
   areaName = areaName.toLowerCase();
-  if (!globalControls.hideList.some(area => area === areaName)) {
+  if (!globalControls.hideList.some((area) => area === areaName)) {
     globalControls.hideList.push(areaName);
-    document.querySelector(
-      "#df-hide-input"
-    ).value = globalControls.hideList.join(",");
+    document.querySelector("#df-hide-input").value =
+      globalControls.hideList.join(",");
     writeStorage();
     hideCards();
   }
@@ -335,7 +368,7 @@ function toggleDetails(cardInfo) {
       "Sorry, something went wrong, we could not get the property details";
 
     fetchPropertyDetails(cardInfo)
-      .then(content => {
+      .then((content) => {
         detailsNode.innerHTML = content || errMsg;
       })
       .catch(() => {
@@ -351,17 +384,17 @@ function capitalize(str) {
   return str
     ? str
         .split(" ")
-        .map(s => s.substring(0, 1).toUpperCase() + s.substring(1))
+        .map((s) => s.substring(0, 1).toUpperCase() + s.substring(1))
         .join(" ")
     : "";
 }
 
 function showPhotos(cardInfo) {
-  fetchPageBody(cardInfo).then(frag => {
+  fetchPageBody(cardInfo).then((frag) => {
     // Find list of photo images from the HTML for the carousel in the page.
     const urls = Array.from(
       frag.querySelectorAll("#pbxl_photo_carousel ul li img")
-    ).map(img => img.src);
+    ).map((img) => img.src);
 
     sendEvent("action", "show_photos", null, urls.length);
     if (urls.length > 0) {
@@ -436,7 +469,7 @@ function showPhotos(cardInfo) {
 
       document.body.addEventListener("keydown", keyListener, false);
 
-      const images = urls.map(url => {
+      const images = urls.map((url) => {
         const img = document.createElement("img");
         img.src = url;
         img.className = "df-img";
@@ -455,7 +488,7 @@ function showPhotos(cardInfo) {
 
       modal.innerHTML = closeContainer;
 
-      images.forEach(img => {
+      images.forEach((img) => {
         const div = document.createElement("div");
         div.appendChild(img);
         div.className = "df-img-wrapper";
@@ -465,7 +498,7 @@ function showPhotos(cardInfo) {
 
       modal.addEventListener(
         "click",
-        evt => {
+        (evt) => {
           if (evt.target.tagName !== "IMG") {
             removeModal();
           }
@@ -509,7 +542,7 @@ function saveNotes(cardInfo, textValue, skipServerSave) {
     // Try to save the note to the server for the user too!
     fetch("/my-daft/ajax/saved-ads/", {
       method: "POST",
-      body: formData
+      body: formData,
     });
   }
 }
@@ -518,11 +551,11 @@ function hideCards() {
   const cards = findCards();
   console.log("hideCards");
   hiddenCardsCount = 0;
-  cards.forEach(cardInfo => {
+  cards.forEach((cardInfo) => {
     let metadata = getMetadata(cardInfo);
     let hidden = metadata.hidden === true;
     if (!hidden && cardInfo.address) {
-      hidden = globalControls.hideList.some(token => {
+      hidden = globalControls.hideList.some((token) => {
         const idx = cardInfo.address.indexOf(token);
         return idx > -1;
       });
@@ -545,7 +578,7 @@ function addChangeListener() {
     var config = { attributes: false, childList: true, subtree: true };
 
     // Callback function to execute when mutations are observed
-    var callback = function(mutationsList, observer) {
+    var callback = function (mutationsList, observer) {
       initCards();
     };
 
@@ -559,7 +592,7 @@ function addChangeListener() {
 
 function initCards() {
   const cards = findCards();
-  cards.forEach(cardInfo => addCardControls(cardInfo, false));
+  cards.forEach((cardInfo) => addCardControls(cardInfo, false));
 }
 
 function getMetadata(cardInfo) {
@@ -575,11 +608,11 @@ function getStorageKey(cardInfo) {
 }
 
 function getGlobalControlKeys() {
-  return Object.keys(globalControls).map(key => "globalControls." + key);
+  return Object.keys(globalControls).map((key) => "globalControls." + key);
 }
 
 function readStorage(cards, callback) {
-  const keys = cards.map(cardInfo => getStorageKey(cardInfo));
+  const keys = cards.map((cardInfo) => getStorageKey(cardInfo));
   let completeCount = 0;
 
   function possiblyCallback() {
@@ -588,17 +621,17 @@ function readStorage(cards, callback) {
     }
   }
 
-  chrome.storage.local.get(keys, function(result) {
+  chrome.storage.local.get(keys, function (result) {
     propertyMetadata = result;
     completeCount++;
 
     possiblyCallback();
   });
 
-  chrome.storage.local.get(["global-controls"], function(result) {
+  chrome.storage.local.get(["global-controls"], function (result) {
     const storedGlobalControls = result && result["global-controls"];
     if (storedGlobalControls) {
-      Object.keys(storedGlobalControls).forEach(key => {
+      Object.keys(storedGlobalControls).forEach((key) => {
         globalControls[key] = storedGlobalControls[key];
       });
     }
@@ -610,7 +643,7 @@ function readStorage(cards, callback) {
 
 function writeStorage(callback) {
   const obj = {};
-  Object.keys(propertyMetadata).forEach(key => {
+  Object.keys(propertyMetadata).forEach((key) => {
     // Only write objects that actually have something in them
     if (Object.keys(propertyMetadata[key]).length > 0) {
       obj[key] = propertyMetadata[key];
@@ -618,7 +651,7 @@ function writeStorage(callback) {
   });
   obj["global-controls"] = globalControls;
 
-  chrome.storage.local.set(obj, function() {
+  chrome.storage.local.set(obj, function () {
     callback && callback();
   });
 }
@@ -633,10 +666,7 @@ function autoExpandPropertyDescription() {
 function getCardIndex(node) {
   const counterNode = node.querySelector(".sr_counter");
   if (counterNode) {
-    const text = counterNode.textContent
-      .split(".")
-      .join("")
-      .trim();
+    const text = counterNode.textContent.split(".").join("").trim();
     return parseInt(text, 10);
   }
   return -1;
@@ -647,10 +677,10 @@ function getPageLinks() {
     ".paging li:not(.next_page):not(.prev_page) a"
   );
   return Array.from(nodes)
-    .filter(node => {
+    .filter((node) => {
       return node.textContent !== "...";
     })
-    .map(node => {
+    .map((node) => {
       return { node, link: node.href };
     });
 }
@@ -658,7 +688,7 @@ function getPageLinks() {
 function fixUpImageScript(script) {
   script = script
     .split("\n")
-    .map(line => {
+    .map((line) => {
       if (line.indexOf("imgEl.attr(") > 0) {
         const parts = line.split("'");
         if (parts.length > 5) {
@@ -689,12 +719,12 @@ function prefetchPages() {
   const pageLinks = getPageLinks();
   const promises = pageLinks.map(({ node, link }) => {
     return fetch(link)
-      .then(res => res.text())
-      .then(html => sanitizeHtml(html))
-      .then(html => extractPageContent(html));
+      .then((res) => res.text())
+      .then((html) => sanitizeHtml(html))
+      .then((html) => extractPageContent(html));
   });
 
-  Promise.all(promises).then(pages => {
+  Promise.all(promises).then((pages) => {
     if (pages.length > 0) {
       const cardWrapper = allCards[0].rootNode.parentNode;
 
@@ -706,7 +736,7 @@ function prefetchPages() {
 
       pages.forEach((pageInfo, idx) => {
         const { nodes, scripts } = pageInfo;
-        nodes.forEach(node => {
+        nodes.forEach((node) => {
           const index = getCardIndex(node);
 
           // Insert the nodes in the correct order.  If we landed on a page in
@@ -718,7 +748,7 @@ function prefetchPages() {
             cardWrapper.appendChild(node);
           }
         });
-        scripts.forEach(script => allScripts.push(fixUpImageScript(script)));
+        scripts.forEach((script) => allScripts.push(fixUpImageScript(script)));
       });
 
       // Add the card controls to the newly inserted property cards.
@@ -811,9 +841,9 @@ function fetchPageBody(cardInfo) {
     return Promise.resolve(cardInfo.pageContentNode);
   } else {
     return fetch(cardInfo.href)
-      .then(resp => resp.text())
-      .then(html => sanitizeHtml(html))
-      .then(html => {
+      .then((resp) => resp.text())
+      .then((html) => sanitizeHtml(html))
+      .then((html) => {
         const frag = document.createElement("div");
         frag.innerHTML = html;
         cardInfo.pageContentNode = frag;
@@ -834,13 +864,13 @@ function getBodyContent(html) {
 }
 
 function fetchPropertyDetails(cardInfo) {
-  return fetchPageBody(cardInfo).then(frag => {
+  return fetchPageBody(cardInfo).then((frag) => {
     const propertyDetailsNodes = frag.querySelectorAll(
       ".PropertyDescription__propertyDescription, .PropertyFeatures__featuresList, #smi-tab-overview"
     );
     if (propertyDetailsNodes) {
       return Array.from(propertyDetailsNodes)
-        .map(node => node.innerHTML)
+        .map((node) => node.innerHTML)
         .join("<br />");
     } else {
       return null;
@@ -863,7 +893,7 @@ function extractPageContent(html) {
   }
 
   let scripts = [];
-  cards.forEach(node => {
+  cards.forEach((node) => {
     const scriptNode = node.nextElementSibling;
 
     // We have to collect the contents of the script tags that follow each
@@ -876,7 +906,7 @@ function extractPageContent(html) {
 
   return {
     nodes: cards,
-    scripts: scripts
+    scripts: scripts,
   };
 }
 
@@ -892,7 +922,7 @@ function storeNoteFromDaftForm() {
   if (saveButton && textarea) {
     saveButton.addEventListener(
       "click",
-      evt => {
+      (evt) => {
         const href = "https://www.daft.ie" + window.location.pathname;
         saveNotes({ href }, textarea.value.trim(), true);
       },
@@ -905,8 +935,8 @@ function extractPlaceName(address) {
   const possibleNames = address
     .toLowerCase()
     .split(",")
-    .map(t => t.trim())
-    .filter(t => t.indexOf("co. ") < 0 && !t.match("[0-9]"));
+    .map((t) => t.trim())
+    .filter((t) => t.indexOf("co. ") < 0 && !t.match("[0-9]"));
 
   return possibleNames.length > 0
     ? possibleNames[possibleNames.length - 1]
