@@ -139,10 +139,15 @@ function findParentByClass(node, cls) {
   return null;
 }
 
+/**
+ * Adds the user's controls to the page.
+ * @returns { void }
+ */
 function addGlobalControls() {
-  const container = document.querySelector(".tabs-container .tabs-area");
+  const container = document.querySelector(".sc-d3eae364-0");
 
   if (!container) {
+    console.error("Could not find container for Dafty controls");
     return;
   }
 
@@ -318,7 +323,6 @@ function updateHideList(evt) {
 
   globalControls.hideList = tokens;
   writeStorage();
-  hideCards();
 }
 
 function addToHideAreaList(areaName) {
@@ -339,7 +343,6 @@ function updateHiddenState() {
 }
 
 function toggleHideCard(cardInfo) {
-  sendEvent("action", "hide");
   const metadata = getMetadata(cardInfo);
   metadata.hidden = !metadata.hidden;
   hideCards();
@@ -357,7 +360,7 @@ function toggleDetails(cardInfo) {
   let detailsNode = cardInfo.extraDetailsNode;
 
   if (!detailsNode) {
-    sendEvent("action", "show_details");
+    // sendEvent("action", "show_details");
 
     cardInfo.extraDetailsNode = detailsNode = document.createElement("div");
     detailsNode.innerHTML = "Loading ...";
@@ -396,7 +399,7 @@ function showPhotos(cardInfo) {
       frag.querySelectorAll("#pbxl_photo_carousel ul li img")
     ).map((img) => img.src);
 
-    sendEvent("action", "show_photos", null, urls.length);
+    // sendEvent("action", "show_photos", null, urls.length);
     if (urls.length > 0) {
       const modal = document.createElement("div");
       modal.className = "df-modal";
@@ -515,7 +518,7 @@ function showMap(cardInfo) {
   // It'd be nice to insert the map page in an iframe, but they do an annoying redirect in this case,
   // and attempts to block it with the 'sandbox' attribute cause the page itself to fail for
   // some reason.  So, let's go with the backup option of a popup window.
-  sendEvent("action", "show_map");
+  // sendEvent("action", "show_map");
   window.open(
     cardInfo.href + "?df-map-view=1",
     "df-map",
@@ -524,7 +527,7 @@ function showMap(cardInfo) {
 }
 
 function saveNotes(cardInfo, textValue, skipServerSave) {
-  sendEvent("action", "save_note");
+  // sendEvent("action", "save_note");
 
   const metadata = getMetadata(cardInfo);
   metadata.notes = textValue;
@@ -549,7 +552,6 @@ function saveNotes(cardInfo, textValue, skipServerSave) {
 
 function hideCards() {
   const cards = findCards();
-  console.log("hideCards");
   hiddenCardsCount = 0;
   cards.forEach((cardInfo) => {
     let metadata = getMetadata(cardInfo);
@@ -754,7 +756,6 @@ function prefetchPages() {
       // Add the card controls to the newly inserted property cards.
       initCards();
       hideCards();
-
       const scriptInterval = setInterval(() => {
         if (allScripts.length > 0) {
           const scriptContent = allScripts.shift();
@@ -944,7 +945,7 @@ function extractPlaceName(address) {
 }
 
 if (isSupportedPageType()) {
-  sendEvent("lifecycle", "load", getTransactionType());
+  // sendEvent("lifecycle", "load", getTransactionType());
   readStorage(findCards(), () => {
     initCards();
     hideCards();

@@ -2,7 +2,7 @@
   "name": "Dafty",
   "version": "1.6",
   "description": "Unoffical improvements for Daft.ie",
-  "manifest_version": 2,
+  "manifest_version": 3,
   "permissions": [
     "activeTab",
     "storage",
@@ -12,7 +12,7 @@
     {
       "matches": ["https://daft.ie/*", "https://www.daft.ie/*"],
       "css": ["index.css"],
-      "js": ["analytics.js", "contentScript.js"]
+      "js": ["contentScript.js"]
     },
     {
       "matches": [
