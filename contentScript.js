@@ -73,7 +73,7 @@ function findCards() {
 
     // Extract metadata from spans
     const metadataSpans = Array.from(
-      metadataNode?.querySelectorAll(".sc-5d364562-1 span") || []
+      metadataNode?.querySelectorAll("span") || []
     );
 
     /**
@@ -488,31 +488,42 @@ function hideCards() {
   return hiddenCardsCount;
 }
 
+/**
+ * Adds a mutation observer to the page to detect changes in the DOM.
+ * This is used to detect new property cards being added to the page as
+ * the user navigates through listings.
+ * @returns {void}
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver
+ */
 function addChangeListener() {
-  const cardContainer = document.querySelector(".sr_content");
+  const cardContainer = document.querySelector('[data-testid="results"]');
 
   if (cardContainer) {
-    // Options for the observer (which mutations to observe)
-    var config = { attributes: false, childList: true, subtree: true };
-
-    // Callback function to execute when mutations are observed
-    var callback = function (mutationsList, observer) {
+    const observer = new MutationObserver((mutationsList) => {
       initCards();
-    };
+    });
 
-    // Create an observer instance linked to the callback function
-    var observer = new MutationObserver(callback);
-
-    // Start observing the target node for configured mutations
-    observer.observe(targetNode, config);
+    observer.observe(cardContainer, {
+      childList: true,
+      subtree: true,
+    });
   }
 }
 
+/**
+ * Finds property cards on the page and adds controls to them.
+ * @returns {void}
+ */
 function initCards() {
   const cards = findCards();
   cards.forEach((cardInfo) => addCardControls(cardInfo, false));
 }
 
+/**
+ * Saves property metadata and global controls to chrome.storage.
+ * @returns {Promise<void>}
+ * @see https://developer.chrome.com/docs/extensions/reference/storage/
+ */
 function getMetadata(cardInfo) {
   const key = getStorageKey(cardInfo);
   if (!propertyMetadata[key]) {
