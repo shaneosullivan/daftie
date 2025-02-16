@@ -7,7 +7,6 @@ const globalControls = {
 };
 
 function refreshUI() {
-  addGlobalControls();
   updateHiddenState();
 }
 
@@ -139,68 +138,6 @@ function findParentByClass(node, cls) {
   return null;
 }
 
-/**
- * Adds the user's controls to the page.
- * @returns { void }
- */
-function addGlobalControls() {
-  const container = document.querySelector(".sc-d3eae364-0");
-
-  if (!container) {
-    console.error("Could not find container for Dafty controls");
-    return;
-  }
-
-  const cls = "df-global-controls";
-  const existingNode = document.querySelector(`.${cls}`);
-
-  // Regenerate the controls each time.  It's simpler than fiddling with each
-  // control's state
-  if (existingNode) {
-    existingNode.parentNode.removeChild(existingNode);
-  }
-
-  const toggleHiddenButton = `<button class="df-button df-toggle-hidden" ${
-    hiddenCardsCount > 0 ? "" : 'disabled="true"'
-  }></button>`;
-
-  const hideControls = `<span class="df-input-wrapper" title="Hide all properties matching this text. Use comma separated values">
-      <label for="df-hide-input">Hide Matching</label>
-      <input type="text" id="df-hide-input" value="${globalControls.hideList.join(
-        ","
-      )}">
-    </span>
-  `;
-
-  const controls = `<div class="df-global-controls">
-    ${toggleHiddenButton}
-    ${hideControls}
-   </div>`;
-
-  const frag = document.createElement("div");
-  frag.innerHTML = controls;
-  const toggleHiddenButtonNode = frag.querySelector(".df-toggle-hidden");
-
-  toggleHiddenButtonNode.addEventListener("click", toggleHidden, false);
-  updateHiddenButtonToggle(toggleHiddenButtonNode);
-
-  frag
-    .querySelector("#df-hide-input")
-    .addEventListener("change", updateHideList, false);
-
-  container.appendChild(frag);
-}
-
-function updateHiddenButtonToggle(possibleButton) {
-  const button =
-    possibleButton || document.body.querySelector(".df-toggle-hidden");
-  if (button) {
-    button.textContent = globalControls.hiddenEnabled
-      ? `Show ${hiddenCardsCount} hidden`
-      : `Hide ${hiddenCardsCount}`;
-  }
-}
-
 function addCardControls(cardInfo, force) {
   // Instead of looking for a sibling, look for existing controls within the card
   const existingNode = cardInfo.rootNode.querySelector(".df-controls-wrapper");
@@ -295,13 +232,6 @@ function addCardControls(cardInfo, force) {
 
   cardInfo.notesNode = notesNode;
   cardInfo.controlsNode = frag;
-}
-
-function toggleHidden() {
-  globalControls.hiddenEnabled = !globalControls.hiddenEnabled;
-  updateHiddenState();
-  writeStorage();
-  addGlobalControls();
 }
 
 function updateHideList(evt) {
@@ -555,7 +485,6 @@ function hideCards() {
 
     cardInfo.rootNode.classList[hidden ? "add" : "remove"]("df-hidden");
   });
-  updateHiddenButtonToggle();
   return hiddenCardsCount;
 }
 
@@ -600,37 +529,34 @@ function getGlobalControlKeys() {
   return Object.keys(globalControls).map((key) => "globalControls." + key);
 }
 
-function readStorage(cards, callback) {
+/**
+ * Reads stored property metadata and global controls from chrome.storage
+ * @param {Array} cards - Array of card information objects
+ * @returns {Promise<void>}
+ */
+async function readStorage(cards) {
   const keys = cards.map((cardInfo) => getStorageKey(cardInfo));
-  let completeCount = 0;
 
-  function possiblyCallback() {
-    if (completeCount === 2) {
-      callback && callback();
-    }
+  const [metadata, controls] = await Promise.all([
+    chrome.storage.local.get(keys),
+    chrome.storage.local.get(["global-controls"]),
+  ]);
+
+  propertyMetadata = metadata;
+
+  const storedGlobalControls = controls["global-controls"];
+  if (storedGlobalControls) {
+    Object.keys(storedGlobalControls).forEach((key) => {
+      globalControls[key] = storedGlobalControls[key];
+    });
   }
-
-  chrome.storage.local.get(keys, function (result) {
-    propertyMetadata = result;
-    completeCount++;
-
-    possiblyCallback();
-  });
-
-  chrome.storage.local.get(["global-controls"], function (result) {
-    const storedGlobalControls = result && result["global-controls"];
-    if (storedGlobalControls) {
-      Object.keys(storedGlobalControls).forEach((key) => {
-        globalControls[key] = storedGlobalControls[key];
-      });
-    }
-    completeCount++;
-
-    possiblyCallback();
-  });
 }
 
-function writeStorage(callback) {
+/**
+ * Writes property metadata and global controls to chrome.storage
+ * @returns {Promise<void>}
+ */
+async function writeStorage() {
   const obj = {};
   Object.keys(propertyMetadata).forEach((key) => {
     // Only write objects that actually have something in them
@@ -640,9 +566,7 @@ function writeStorage(callback) {
   });
   obj["global-controls"] = globalControls;
 
-  chrome.storage.local.set(obj, function () {
-    callback && callback();
-  });
+  await chrome.storage.local.set(obj);
 }
 
 function autoExpandPropertyDescription() {
@@ -933,14 +857,31 @@ function extractPlaceName(address) {
 
 if (isSupportedPageType()) {
   // sendEvent("lifecycle", "load", getTransactionType());
-  readStorage(findCards(), () => {
-    initCards();
-    hideCards();
-    refreshUI();
-    autoExpandPropertyDescription();
-    addChangeListener();
-    prefetchPages();
-  });
+  readStorage(findCards())
+    .then(() => {
+      initCards();
+      hideCards();
+      refreshUI();
+      autoExpandPropertyDescription();
+      addChangeListener();
+      prefetchPages();
+    })
+    .catch((error) => {
+      console.error("Failed to read storage:", error);
+    });
 } else {
   storeNoteFromDaftForm();
 }
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "getHiddenCount") {
+    sendResponse({ count: hiddenCardsCount });
+    return true;
+  }
+  if (message.type === "settingsUpdated") {
+    globalControls.hiddenEnabled = message.settings.hiddenEnabled;
+    globalControls.hideList = message.settings.hideList;
+    updateHiddenState();
+    hideCards();
+  }
+});

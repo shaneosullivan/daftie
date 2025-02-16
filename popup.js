@@ -21,11 +21,28 @@ function updateUI() {
 
   // Update toggle button text
   toggleText.textContent = state.hiddenEnabled
-    ? `Showing ${state.hiddenCount} hidden`
+    ? `Show ${state.hiddenCount} hidden`
     : `Hide ${state.hiddenCount}`;
 
   // Update hide list input
   hideListInput.value = state.hideList.join(", ");
+}
+
+/**
+ * Notifies the content script of updated settings
+ * @returns {Promise<void>}
+ */
+async function notifyContentScript() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id) {
+    chrome.tabs.sendMessage(tab.id, {
+      type: "settingsUpdated",
+      settings: {
+        hiddenEnabled: state.hiddenEnabled,
+        hideList: state.hideList,
+      },
+    });
+  }
 }
 
 /**
@@ -34,19 +51,23 @@ function updateUI() {
  */
 async function loadSettings() {
   try {
-    const result = await chrome.storage.local.get([
-      "global-controls",
-      "hiddenCount",
-    ]);
-    const controls = result["global-controls"] || {};
-
-    state = {
-      hiddenEnabled: controls.hiddenEnabled !== false,
-      hideList: controls.hideList || [],
-      hiddenCount: result.hiddenCount || 0,
-    };
-
-    updateUI();
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (tab?.id) {
+      // Get current count from content script
+      chrome.tabs.sendMessage(
+        tab.id,
+        { type: "getHiddenCount" },
+        (response) => {
+          if (response) {
+            state.hiddenCount = response.count;
+            updateUI();
+          }
+        }
+      );
+    }
   } catch (error) {
     console.error("Failed to load settings:", error);
   }
@@ -54,7 +75,7 @@ async function loadSettings() {
 
 /**
  * Saves current settings to chrome.storage
- * @returns {void}
+ * @returns {Promise<void>}
  */
 async function saveSettings() {
   try {
@@ -77,6 +98,7 @@ async function toggleHidden() {
   state.hiddenEnabled = !state.hiddenEnabled;
   await saveSettings();
   updateUI();
+  await notifyContentScript();
 }
 
 /**
@@ -91,6 +113,7 @@ async function updateHideList(event) {
     .filter((item) => item.length > 0);
 
   await saveSettings();
+  await notifyContentScript();
 }
 
 // Initialize popup
