@@ -202,18 +202,17 @@ function updateHiddenButtonToggle(possibleButton) {
 }
 
 function addCardControls(cardInfo, force) {
-  const sibling = cardInfo.rootNode.nextElementSibling;
-  const existingNode =
-    sibling && sibling.getAttribute("data-df") === "controls" ? sibling : null;
+  // Instead of looking for a sibling, look for existing controls within the card
+  const existingNode = cardInfo.rootNode.querySelector(".df-controls-wrapper");
 
   if (existingNode) {
-    // Already added
     if (force === true) {
-      existingNode.parentNode.removeChild(existingNode);
+      existingNode.remove();
     } else {
       return;
     }
   }
+
   const metadata = getMetadata(cardInfo);
   const areaName = extractPlaceName(cardInfo.address || "");
 
@@ -240,6 +239,20 @@ function addCardControls(cardInfo, force) {
   frag.className = "df-controls-wrapper";
   frag.innerHTML = controls;
 
+  // Create notes container
+  const notesFrag = document.createElement("div");
+  notesFrag.innerHTML = `
+    <div class="df-notes-container${metadata.notes ? " shown" : ""}">
+      <div class="df-notes-inner">
+        <textarea class="df-notes-text${
+          metadata.notes ? " shown" : ""
+        }" rows="3" cols="80" placeholder="Enter notes here">${
+    metadata.notes || ""
+  }</textarea>
+      </div>
+    </div>`;
+
+  // Add event listeners
   frag.querySelector(".df-hide").addEventListener("click", () => {
     toggleHideCard(cardInfo);
   });
@@ -257,43 +270,15 @@ function addCardControls(cardInfo, force) {
     showPhotos(cardInfo);
   });
 
-  frag.querySelector(".df-map").addEventListener("click", (evt) => {
+  frag.querySelector(".df-map").addEventListener("click", () => {
     showMap(cardInfo);
   });
 
   const hideAreaButton = frag.querySelector(".df-hide-area");
-
   hideAreaButton &&
-    hideAreaButton.addEventListener("click", (evt) => {
+    hideAreaButton.addEventListener("click", () => {
       addToHideAreaList(areaName);
     });
-
-  const photoNodes = Array.from(
-    cardInfo.rootNode.querySelectorAll(
-      ".PropertyImage__propertyInfoContainer .PropertyImage__iconContainer,.image a"
-    )
-  );
-  photoNodes.forEach((photoNode) => {
-    photoNode.addEventListener("click", (evt) => {
-      evt.preventDefault();
-      evt.stopPropagation();
-      showPhotos(cardInfo);
-    });
-    photoNode.style.cursor = "pointer";
-    photoNode.title = "Show all photos for this property";
-  });
-
-  const notesFrag = document.createElement("div");
-  notesFrag.innerHTML = `
-    <div class="df-notes-container${metadata.notes ? " shown" : ""}">
-      <div class="df-notes-inner">
-        <textarea class="df-notes-text${
-          metadata.notes ? " shown" : ""
-        }" rows="3" cols="80" placeholder="Enter notes here">${
-    metadata.notes || ""
-  }</textarea>
-      </div>
-    </div>`;
 
   notesFrag
     .querySelector(".df-notes-text")
@@ -301,8 +286,10 @@ function addCardControls(cardInfo, force) {
       saveNotes(cardInfo, evt.target.value);
     });
 
-  // cardInfo.detailsNode.appendChild(frag);
-  insertAfter(frag, cardInfo.rootNode);
+  // Append controls to the card instead
+  cardInfo.rootNode.appendChild(frag);
+
+  // Add notes container to the controls wrapper
   const notesNode = notesFrag.firstElementChild;
   frag.appendChild(notesNode);
 
