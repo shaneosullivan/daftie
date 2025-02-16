@@ -69,27 +69,6 @@
   display: block !important;
 }
 
-.df-notes-container {
-  overflow: hidden;
-  transition: height 0.3s linear;
-  height: 0px;
-}
-
-.df-notes-container textarea {
-  resize: none;
-}
-
-.df-notes-container.shown {
-  border-top: 1px solid #ededed;
-  display: block;
-  height: 63px;
-}
-
-.df-notes-container .df-notes-inner {
-  background-color: #fcfae1;
-  padding: 8px;
-}
-
 .df-details-container {
   border-top: 1px solid #dfdfdf;
   color: #666666;
@@ -175,4 +154,30 @@ notscript {
 
 .df-hide-area {
   float: right;
+}
+
+/* Notes */
+.df-notes-container {
+  overflow: hidden;
+  transition: height 0.3s linear;
+  height: 0px;
+}
+
+.df-notes-container textarea {
+  resize: none;
+}
+
+.df-notes-container.shown {
+  border-top: 1px solid #ededed;
+  display: block;
+  height: auto;
+}
+
+.df-notes-container .df-notes-inner {
+  background-color: #fcfae1;
+  padding: 8px;
+}
+
+.df-notes-text {
+  max-width: 100%;
 }
