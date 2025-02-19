@@ -69,25 +69,6 @@
   display: block !important;
 }
 
-.df-details-container {
-  border-top: 1px solid #dfdfdf;
-  color: #666666;
-  padding: 10px;
-  display: none;
-  font-size: 1.5em;
-  line-height: 1.5em;
-}
-
-.df-details-container.shown {
-  display: block;
-}
-
-.df-details-container #dfp-property_details_full,
-.df-details-container #smi-map-text-holder,
-.df-details-container .smi-overview-header {
-  display: none;
-}
-
 .df-modal {
   position: fixed;
   left: 0;
@@ -180,4 +161,24 @@ notscript {
 
 .df-notes-text {
   max-width: 100%;
+}
+
+/* Property card details */
+.df-details-container {
+  border-top: 1px solid #dfdfdf;
+  color: #3c4142;
+  padding: 10px;
+  display: none;
+  font-size: 1.15rem;
+  line-height: 1.5em;
+}
+
+.df-details-container.shown {
+  display: block;
+}
+
+.df-details-container #dfp-property_details_full,
+.df-details-container #smi-map-text-holder,
+.df-details-container .smi-overview-header {
+  display: none;
 }

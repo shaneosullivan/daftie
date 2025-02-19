@@ -273,27 +273,22 @@ function toggleNotes(cardInfo) {
   notesNode.classList.toggle("shown");
 }
 
-function toggleDetails(cardInfo) {
+async function toggleDetails(cardInfo) {
   let detailsNode = cardInfo.extraDetailsNode;
 
   if (!detailsNode) {
     // sendEvent("action", "show_details");
-
     cardInfo.extraDetailsNode = detailsNode = document.createElement("div");
     detailsNode.innerHTML = "Loading ...";
     detailsNode.className = "df-details-container";
     cardInfo.controlsNode.appendChild(cardInfo.extraDetailsNode);
 
-    const errMsg =
-      "Sorry, something went wrong, we could not get the property details";
-
-    fetchPropertyDetails(cardInfo)
-      .then((content) => {
-        detailsNode.innerHTML = content || errMsg;
-      })
-      .catch(() => {
-        detailsNode.innerHTML = errMsg;
-      });
+    try {
+      const content = await fetchPropertyDetails(cardInfo);
+      detailsNode.innerHTML = content;
+    } catch (error) {
+      detailsNode.innerHTML = error.message;
+    }
   }
 
   cardInfo.extraDetailsNode.classList.toggle("shown");
@@ -751,54 +746,122 @@ function prefetchPages() {
   });
 }
 
+/**
+ * Sanitizes HTML by removing script tags and ad-related content
+ * while preserving formatting
+ * @param {string} html - Raw HTML string to sanitize
+ * @returns {string} Sanitized HTML with preserved formatting
+ */
 function sanitizeHtml(html) {
-  return html
-    .split("<script")
-    .join("<notscript")
-    .split("</script")
-    .join("</notscript");
+  const div = document.createElement("div");
+  div.innerHTML = html;
+
+  // Remove ad-related elements
+  const adElements = div.querySelectorAll(
+    '[data-testid^="dfp-slot"], .adunitContainer, .adBox'
+  );
+  adElements.forEach((el) => el.remove());
+
+  // not quite sure how they've done it, but the description has no html markup,
+  // but is still somehow formatted on the property detail page 🤷‍♂️
+  // unfortunately, this means the formatting is not there when we extract it
+  const text = div.innerHTML;
+  return text;
 }
 
-function fetchPageBody(cardInfo) {
+/**
+ * Fetches and caches the property page content
+ * @param {Object} cardInfo - Property card information
+ * @param {string} cardInfo.href - URL of the property page
+ * @param {Element} [cardInfo.pageContentNode] - Cached page content if available
+ * @returns {Promise<Element>} Document fragment containing the page content
+ */
+async function fetchPageBody(cardInfo) {
   if (cardInfo.pageContentNode) {
-    return Promise.resolve(cardInfo.pageContentNode);
-  } else {
-    return fetch(cardInfo.href)
-      .then((resp) => resp.text())
-      .then((html) => sanitizeHtml(html))
-      .then((html) => {
-        const frag = document.createElement("div");
-        frag.innerHTML = html;
-        cardInfo.pageContentNode = frag;
-        return frag;
-      });
+    return cardInfo.pageContentNode;
+  }
+
+  try {
+    const response = await fetch(cardInfo.href);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch page (${response.status})`);
+    }
+
+    const html = await response.text();
+    const frag = document.createElement("div");
+    frag.innerHTML = html;
+
+    cardInfo.pageContentNode = frag;
+    return frag;
+  } catch (error) {
+    console.error("Error fetching property page:", error);
+    throw new Error("Failed to load property page");
   }
 }
 
-function getBodyContent(html) {
-  // Find the body tag
-  const bodyStartIdx = html.indexOf("<body");
-  const bodyEndIdx = html.indexOf("</body");
-  const bodyOuterContent = html.substring(bodyStartIdx, bodyEndIdx);
-  const bodyContent = bodyOuterContent.substring(
-    bodyOuterContent.indexOf(">") + 1
-  );
-  return bodyContent;
+/**
+ * Extracts and formats property details from the property page
+ * @param {Object} cardInfo - Property card information
+ * @returns {Promise<string>} Formatted HTML string of property details
+ */
+async function fetchPropertyDetails(cardInfo) {
+  try {
+    const frag = await fetchPageBody(cardInfo);
+
+    let descriptionText = "";
+    const mainDescription = frag.querySelector('[data-testid="description"]');
+
+    if (mainDescription) {
+      // Try to get nested description first
+      const nestedDescription = mainDescription.querySelector(
+        '[data-testid="description"]'
+      );
+      if (nestedDescription) {
+        descriptionText = sanitizeHtml(nestedDescription.innerHTML);
+      } else {
+        // If no nested description, use main description
+        descriptionText = sanitizeHtml(mainDescription.innerHTML);
+      }
+    }
+
+    if (!descriptionText.trim()) {
+      throw new Error("Property description not found");
+    }
+
+    // Wrap in a div with proper styling
+    return `<div class="property-details">${descriptionText}</div>`;
+  } catch (error) {
+    console.error("Error fetching property details:", error);
+    throw new Error("Could not load property details. Please try again later.");
+  }
 }
 
-function fetchPropertyDetails(cardInfo) {
-  return fetchPageBody(cardInfo).then((frag) => {
-    const propertyDetailsNodes = frag.querySelectorAll(
-      ".PropertyDescription__propertyDescription, .PropertyFeatures__featuresList, #smi-tab-overview"
-    );
-    if (propertyDetailsNodes) {
-      return Array.from(propertyDetailsNodes)
-        .map((node) => node.innerHTML)
-        .join("<br />");
-    } else {
-      return null;
+/**
+ * Toggles the visibility of property details
+ * @param {Object} cardInfo - Property card information
+ * @returns {boolean} Whether the details are now shown
+ */
+async function toggleDetails(cardInfo) {
+  let detailsNode = cardInfo.extraDetailsNode;
+
+  if (!detailsNode) {
+    cardInfo.extraDetailsNode = detailsNode = document.createElement("div");
+    detailsNode.className = "df-details-container";
+    cardInfo.controlsNode.appendChild(detailsNode);
+
+    detailsNode.innerHTML =
+      '<div class="loading">Loading property details...</div>';
+
+    try {
+      const content = await fetchPropertyDetails(cardInfo);
+      detailsNode.innerHTML = content;
+    } catch (error) {
+      detailsNode.innerHTML = `<div class="error">${error.message}</div>`;
     }
-  });
+  }
+
+  detailsNode.classList.toggle("shown");
+  return detailsNode.classList.contains("shown");
 }
 
 function extractPageContent(html) {
