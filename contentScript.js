@@ -16,7 +16,7 @@ const globalControls = {
 
 /**
  * Updates the visibility state of hidden properties in the UI
- * @returns {Promise<void}
+ * @returns {Promise<void>}
  */
 function updateVisibilityState() {
   document.body.classList[globalControls.hiddenEnabled ? "remove" : "add"](
@@ -233,7 +233,7 @@ async function getPropertyNextData(cardInfo) {
 }
 
 /**
- * Adds an area name to the global hide list
+ * Adds all of a specific area to the hide list
  * @param {string} areaName Name of the area to hide
  */
 async function addToHideAreaList(areaName) {
@@ -330,676 +330,489 @@ function capitalize(str) {
 
 /**
  * Shows property photos in a modal dialog with carousel
- * @param {Object} cardInfo - Property card information
+ * @param {PropertyCard} cardInfo Property card information
+ * @returns {Promise<void>}
  */
 async function showPhotos(cardInfo) {
   try {
-    const { nextData } = await fetchPageBody(cardInfo);
+    const nextData = await getPropertyNextData(cardInfo);
+    const images = nextData?.props?.pageProps?.listing?.media?.images || [];
 
-    let urls = [];
-    if (nextData?.props?.pageProps?.listing?.media?.images) {
-      urls = nextData.props.pageProps.listing.media.images
-        .map((img) => ({
-          full: img.size1200x1200,
-          thumb: img.size360x240,
-        }))
-        .filter((urls) => urls.full && urls.thumb);
+    const urls = images
+      .map((img) => ({
+        // just two sizes instead of all sizes
+        full: img.size1200x1200,
+        thumb: img.size360x240,
+      }))
+      .filter((urls) => urls.full && urls.thumb);
+
+    if (urls.length === 0) {
+      throw new Error("No photos available");
     }
 
-    if (urls.length > 0) {
-      const dialog = document.createElement("dialog");
-      dialog.className = "df-modal";
+    const dialog = document.createElement("dialog");
+    dialog.className = "df-modal";
 
-      // Create carousel HTML
-      dialog.innerHTML = `
-        <div class="df-close-wrapper">
-          <button class="df-button df-modal-close">Close</button>
+    // Create carousel HTML
+    dialog.innerHTML = `
+      <div class="df-close-wrapper">
+        <button class="df-button df-modal-close">Close</button>
+      </div>
+      <div class="df-carousel">
+        <div class="df-carousel__main">
+          <button class="df-carousel__button" type="button" aria-label="Previous photo" id="prevButton">
+            <svg class="df-carousel__arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <ul class="df-carousel__slides">
+            ${urls
+              .map(
+                (url, idx) => `
+              <li class="df-carousel__slide df-carousel__slide--main ${
+                idx === 0 ? "df-carousel__slide--visible" : ""
+              }">
+                <img 
+                  class="df-carousel__img" 
+                  src="${url.full}"
+                  data-imgid="${idx}"
+                  loading="${idx < 2 ? "eager" : "lazy"}"
+                  alt="Property photo ${idx + 1}"
+                >
+              </li>
+            `
+              )
+              .join("")}
+          </ul>
+          <button class="df-carousel__button" type="button" aria-label="Next photo" id="nextButton">
+            <svg class="df-carousel__arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
         </div>
-        <div class="df-carousel">
-          <div class="df-carousel__main">
-            <button class="df-carousel__button" type="button" aria-label="Previous photo" id="prevButton">
-              <svg class="df-carousel__arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-              </svg>
-            </button>
-            <ul class="df-carousel__slides">
-              ${urls
-                .map(
-                  (url, idx) => `
-                <li class="df-carousel__slide df-carousel__slide--main ${
-                  idx === 0 ? "df-carousel__slide--visible" : ""
-                }">
-                  <img 
-                    class="df-carousel__img" 
-                    src="${url.full}"
-                    data-imgid="${idx}"
-                    loading="${idx < 2 ? "eager" : "lazy"}"
-                    alt="Property photo ${idx + 1}"
-                  >
-                </li>
-              `
-                )
-                .join("")}
-            </ul>
-            <button class="df-carousel__button" type="button" aria-label="Next photo" id="nextButton">
-              <svg class="df-carousel__arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="df-carousel__thumbnails">
-            <ul class="df-carousel__slides df-carousel__slides--thumbnails">
-              ${urls
-                .map(
-                  (url, idx) => `
-                <li class="df-carousel__slide df-carousel__slide--thumbnail ${
-                  idx === 0 ? "df-carousel__slide--visible" : ""
-                }">
-                  <img 
-                    class="df-carousel__img" 
-                    src="${url.thumb}"
-                    data-imgid="${idx}"
-                    alt="Thumbnail ${idx + 1}"
-                  >
-                </li>
-              `
-                )
-                .join("")}
-            </ul>
-          </div>
+        <div class="df-carousel__thumbnails">
+          <ul class="df-carousel__slides df-carousel__slides--thumbnails">
+            ${urls
+              .map(
+                (url, idx) => `
+              <li class="df-carousel__slide df-carousel__slide--thumbnail ${
+                idx === 0 ? "df-carousel__slide--visible" : ""
+              }">
+                <img 
+                  class="df-carousel__img" 
+                  src="${url.thumb}"
+                  data-imgid="${idx}"
+                  alt="Thumbnail ${idx + 1}"
+                >
+              </li>
+            `
+              )
+              .join("")}
+          </ul>
         </div>
-      `;
+      </div>
+    `;
 
-      let currentIdx = 0;
-      const slides = dialog.querySelectorAll(".df-carousel__slide--main");
-      const thumbnails = dialog.querySelectorAll(
-        ".df-carousel__slide--thumbnail"
-      );
+    let currentIdx = 0;
+    const slides = dialog.querySelectorAll(".df-carousel__slide--main");
+    const thumbnails = dialog.querySelectorAll(
+      ".df-carousel__slide--thumbnail"
+    );
 
-      function changeSlide(oldIdx, newIdx) {
-        // Update visibility
-        slides[newIdx].classList.add("df-carousel__slide--visible");
-        thumbnails[newIdx].classList.add("df-carousel__slide--visible");
+    /**
+     * Updates current slide visibility and thumbnail states
+     * @param {number} oldIdx - Index of current slide
+     * @param {number} newIdx - Index of slide to show
+     * @returns {void}
+     */
+    function changeSlide(oldIdx, newIdx) {
+      slides[newIdx].classList.add("df-carousel__slide--visible");
+      thumbnails[newIdx].classList.add("df-carousel__slide--visible");
 
-        slides[oldIdx].classList.remove("df-carousel__slide--visible");
-        thumbnails[oldIdx].classList.remove("df-carousel__slide--visible");
+      slides[oldIdx].classList.remove("df-carousel__slide--visible");
+      thumbnails[oldIdx].classList.remove("df-carousel__slide--visible");
 
-        currentIdx = newIdx;
-      }
-
-      // Event handlers
-      function handleNext() {
-        const newIdx = currentIdx < slides.length - 1 ? currentIdx + 1 : 0;
-        changeSlide(currentIdx, newIdx);
-      }
-
-      function handlePrev() {
-        const newIdx = currentIdx > 0 ? currentIdx - 1 : slides.length - 1;
-        changeSlide(currentIdx, newIdx);
-      }
-
-      function handleThumbnailClick(e) {
-        const imgId = e.target.dataset.imgid;
-        if (imgId !== undefined) {
-          const newIdx = parseInt(imgId, 10);
-          if (newIdx !== currentIdx) {
-            changeSlide(currentIdx, newIdx);
-          }
-        }
-      }
-
-      // Add event listeners
-      dialog.querySelector("#nextButton").addEventListener("click", handleNext);
-      dialog.querySelector("#prevButton").addEventListener("click", handlePrev);
-      dialog
-        .querySelector(".df-carousel__slides--thumbnails")
-        .addEventListener("click", handleThumbnailClick);
-
-      dialog.addEventListener("keydown", (e) => {
-        if (e.key === "ArrowRight") {
-          e.preventDefault();
-          handleNext();
-        } else if (e.key === "ArrowLeft") {
-          e.preventDefault();
-          handlePrev();
-        }
-      });
-
-      dialog.addEventListener("click", (e) => {
-        if (e.target.closest(".df-modal-close")) {
-          dialog.close();
-        }
-      });
-
-      // Clean up
-      dialog.addEventListener("close", () => {
-        dialog.remove();
-      });
-
-      // Show dialog
-      document.body.appendChild(dialog);
-      dialog.showModal();
+      currentIdx = newIdx;
     }
+
+    /**
+     * Handles next slide button click
+     * @returns {void}
+     */
+    function handleNext() {
+      const newIdx = currentIdx < slides.length - 1 ? currentIdx + 1 : 0;
+      changeSlide(currentIdx, newIdx);
+    }
+
+    /**
+     * Handles previous slide button click
+     * @returns {void}
+     */
+    function handlePrev() {
+      const newIdx = currentIdx > 0 ? currentIdx - 1 : slides.length - 1;
+      changeSlide(currentIdx, newIdx);
+    }
+
+    /**
+     * Handles thumbnail click events
+     * @param {MouseEvent} e - Click event
+     * @returns {void}
+     */
+    function handleThumbnailClick(e) {
+      const imgId = e.target.dataset.imgid;
+      if (imgId !== undefined) {
+        const newIdx = parseInt(imgId, 10);
+        if (newIdx !== currentIdx) {
+          changeSlide(currentIdx, newIdx);
+        }
+      }
+    }
+
+    // Add event listeners
+    dialog.querySelector("#nextButton").addEventListener("click", handleNext);
+    dialog.querySelector("#prevButton").addEventListener("click", handlePrev);
+    dialog
+      .querySelector(".df-carousel__slides--thumbnails")
+      .addEventListener("click", handleThumbnailClick);
+
+    dialog.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNext();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePrev();
+      }
+    });
+
+    dialog.addEventListener("click", (e) => {
+      if (e.target.closest(".df-modal-close")) {
+        dialog.close();
+      }
+    });
+
+    // Clean up on close
+    dialog.addEventListener("close", () => {
+      dialog.remove();
+    });
+
+    // Show dialog
+    document.body.appendChild(dialog);
+    dialog.showModal();
   } catch (error) {
     console.error("Error showing photos:", error);
   }
 }
 
-function showMap(cardInfo) {
-  // It'd be nice to insert the map page in an iframe, but they do an annoying redirect in this case,
-  // and attempts to block it with the 'sandbox' attribute cause the page itself to fail for
-  // some reason.  So, let's go with the backup option of a popup window.
-  // sendEvent("action", "show_map");
-  window.open(
-    cardInfo.href + "?df-map-view=1",
-    "df-map",
-    "width=610,height=800,resizable,scrollbars=yes,status=1"
-  );
-}
-
-function saveNotes(cardInfo, textValue, skipServerSave) {
-  // sendEvent("action", "save_note");
-
-  const metadata = getMetadata(cardInfo);
-  metadata.notes = textValue;
-  writeStorage();
-
-  if (!skipServerSave) {
-    const propertyId = getPropertyId(cardInfo);
-
-    var formData = new FormData();
-    formData.append("action", "update_note");
-    formData.append("note", textValue);
-    formData.append("adId", propertyId);
-    formData.append("adType", cardInfo.transactionType);
-
-    // Try to save the note to the server for the user too!
-    fetch("/my-daft/ajax/saved-ads/", {
-      method: "POST",
-      body: formData,
-    });
-  }
-}
-
-function hideCards() {
-  const cards = findCards();
-  hiddenCardsCount = 0;
-  cards.forEach((cardInfo) => {
-    let metadata = getMetadata(cardInfo);
-    let hidden = metadata.hidden === true;
-    if (!hidden && cardInfo.address) {
-      hidden = globalControls.hideList.some((token) => {
-        const idx = cardInfo.address.indexOf(token);
-        return idx > -1;
-      });
-    }
-    if (hidden) {
-      hiddenCardsCount++;
-    }
-
-    cardInfo.rootNode.classList[hidden ? "add" : "remove"]("df-hidden");
-  });
-  return hiddenCardsCount;
-}
-
 /**
- * Adds a mutation observer to the page to detect changes in the DOM.
- * This is used to detect new property cards being added to the page as
- * the user navigates through listings.
- * @returns {void}
- * @see https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver
- */
-function addChangeListener() {
-  const cardContainer = document.querySelector('[data-testid="results"]');
-
-  if (cardContainer) {
-    const observer = new MutationObserver((mutationsList) => {
-      initCards();
-    });
-
-    observer.observe(cardContainer, {
-      childList: true,
-      subtree: true,
-    });
-  }
-}
-
-/**
- * Finds property cards on the page and adds controls to them.
- * @returns {void}
- */
-function initCards() {
-  const cards = findCards();
-  cards.forEach((cardInfo) => addCardControls(cardInfo, false));
-}
-
-/**
- * Saves property metadata and global controls to chrome.storage.
- * @returns {Promise<void>}
- * @see https://developer.chrome.com/docs/extensions/reference/storage/
- */
-function getMetadata(cardInfo) {
-  const key = getStorageKey(cardInfo);
-  if (!propertyMetadata[key]) {
-    propertyMetadata[key] = {};
-  }
-  return propertyMetadata[key];
-}
-
-function getStorageKey(cardInfo) {
-  return `property:${cardInfo.href}`;
-}
-
-function getGlobalControlKeys() {
-  return Object.keys(globalControls).map((key) => "globalControls." + key);
-}
-
-/**
- * Reads stored property metadata and global controls from chrome.storage
- * @param {Array} cards - Array of card information objects
+ * Shows property location in a modal dialog using OpenStreetMap static map
+ * @param {PropertyCard} cardInfo Property card information
  * @returns {Promise<void>}
  */
-async function readStorage(cards) {
-  const keys = cards.map((cardInfo) => getStorageKey(cardInfo));
-
-  const [metadata, controls] = await Promise.all([
-    chrome.storage.local.get(keys),
-    chrome.storage.local.get(["global-controls"]),
-  ]);
-
-  propertyMetadata = metadata;
-
-  const storedGlobalControls = controls["global-controls"];
-  if (storedGlobalControls) {
-    Object.keys(storedGlobalControls).forEach((key) => {
-      globalControls[key] = storedGlobalControls[key];
-    });
-  }
-}
-
-/**
- * Writes property metadata and global controls to chrome.storage
- * @returns {Promise<void>}
- */
-async function writeStorage() {
-  const obj = {};
-  Object.keys(propertyMetadata).forEach((key) => {
-    // Only write objects that actually have something in them
-    if (Object.keys(propertyMetadata[key]).length > 0) {
-      obj[key] = propertyMetadata[key];
-    }
-  });
-  obj["global-controls"] = globalControls;
-
-  await chrome.storage.local.set(obj);
-}
-
-function autoExpandPropertyDescription() {
-  const node = document.querySelector(".ExpandMoreIndicator__expandLinkText");
-  if (node) {
-    node.click();
-  }
-}
-
-function getCardIndex(node) {
-  const counterNode = node.querySelector(".sr_counter");
-  if (counterNode) {
-    const text = counterNode.textContent.split(".").join("").trim();
-    return parseInt(text, 10);
-  }
-  return -1;
-}
-
-function getPageLinks() {
-  const nodes = document.querySelectorAll(
-    ".paging li:not(.next_page):not(.prev_page) a"
-  );
-  return Array.from(nodes)
-    .filter((node) => {
-      return node.textContent !== "...";
-    })
-    .map((node) => {
-      return { node, link: node.href };
-    });
-}
-
-function fixUpImageScript(script) {
-  script = script
-    .split("\n")
-    .map((line) => {
-      if (line.indexOf("imgEl.attr(") > 0) {
-        const parts = line.split("'");
-        if (parts.length > 5) {
-          // There's too many apostrophes, somehow they got unescaped, e.g.
-          // imgEl.attr('alt', ' Terraced House at 6 St. Patrick's Road, Drumcondra, Dublin 9');
-          // &#039;
-          // The first three parts are fine, as is the last part
-          const firstPart = parts.slice(0, 3).join("'");
-          const lastPart = parts[parts.length - 1];
-          const middlePart = parts.slice(3, parts.length - 1).join("&#039;");
-          return [firstPart, middlePart, lastPart].join("'");
-        }
-      }
-      return line;
-    })
-    .join("\n");
-  return `try{${script}}catch(e){}`;
-}
-
-function prefetchPages() {
-  const allCards = findCards();
-
-  // If there are no properties listed, ignore this page
-  if (allCards.length === 0) {
-    return;
-  }
-
-  const pageLinks = getPageLinks();
-  const promises = pageLinks.map(({ node, link }) => {
-    return fetch(link)
-      .then((res) => res.text())
-      .then((html) => sanitizeHtml(html))
-      .then((html) => extractPageContent(html));
-  });
-
-  Promise.all(promises).then((pages) => {
-    if (pages.length > 0) {
-      const cardWrapper = allCards[0].rootNode.parentNode;
-
-      // Collect <script> tags right after the cards that are used in the homes to buy section
-      // to properly load the images
-      const allScripts = [];
-      // let pageScripts = '';
-      const firstCardIndex = getCardIndex(allCards[0].rootNode);
-
-      pages.forEach((pageInfo, idx) => {
-        const { nodes, scripts } = pageInfo;
-        nodes.forEach((node) => {
-          const index = getCardIndex(node);
-
-          // Insert the nodes in the correct order.  If we landed on a page in
-          // the middle of the list of pages somehow, but earlier pages before
-          // the current page where appropriate.
-          if (firstCardIndex > -1 && index < firstCardIndex) {
-            cardWrapper.insertBefore(node, allCards[0].rootNode);
-          } else {
-            cardWrapper.appendChild(node);
-          }
-        });
-        scripts.forEach((script) => allScripts.push(fixUpImageScript(script)));
-      });
-
-      // Add the card controls to the newly inserted property cards.
-      initCards();
-      hideCards();
-      const scriptInterval = setInterval(() => {
-        if (allScripts.length > 0) {
-          const scriptContent = allScripts.shift();
-
-          // Avoid inserting too many scripts on the page.  At least in older
-          // browsers there was an annoying limit (39?) of how many you could
-          // insert dynamically.  Call me old fashioned, but let's clean up...
-          const existingScriptNode = document.getElementById("df-script");
-          if (existingScriptNode) {
-            existingScriptNode.parentNode.removeChild(existingScriptNode);
-          }
-
-          // Make a new script node
-          const scriptNode = document.createElement("script");
-          scriptNode.setAttribute("id", "df-script");
-          scriptNode.setAttribute("type", "text/javascript");
-          scriptNode.textContent = scriptContent;
-          document.body.appendChild(scriptNode);
-        } else {
-          clearInterval(scriptInterval);
-        }
-      }, 100);
-
-      // Set an interval go through the lazily loaded images and add their
-      // images bit by bit
-      const lazyInterval = setInterval(() => {
-        const lazyImages = Array.from(
-          document.querySelectorAll("img.lazy[data-original]")
-        );
-
-        let counter = 0;
-        if (lazyImages.length > 0) {
-          lazyImages.some((img, idx) => {
-            const url = img.getAttribute("data-original");
-            if (url) {
-              img.src = url;
-              // Remove the data-original attribute so this node doesn't show up
-              // in the query any more
-              img.removeAttribute("data-original");
-              counter++;
-            }
-            return counter > 10;
-          });
-        }
-
-        if (counter === 0) {
-          // If we didn't process any nodes, we're done!
-          clearInterval(lazyInterval);
-        }
-      }, 1000);
-
-      // Move the paging node back to the bottom
-      const pagingNode = document.querySelector("ul.paging");
-      pagingNode.parentNode.appendChild(pagingNode);
-
-      const prevLink = pagingNode.querySelector("li.prev_page + li a");
-      const nextLinkOld = pagingNode.querySelector("li.next_page");
-      const nextLink = nextLinkOld
-        ? nextLinkOld.previousElementSibling.querySelector("a")
-        : null;
-
-      if (prevLink && prevLink.textContent === "...") {
-        prevLink.textContent = "Previous";
-        prevLink.parentNode.style.display = "inline-block";
-      }
-      if (nextLink && nextLink.textContent === "...") {
-        nextLink.textContent = "Next";
-        nextLink.parentNode.style.display = "inline-block";
-      }
-    }
-  });
-}
-
-/**
- * Sanitizes HTML by removing script tags and ad-related content
- * while preserving formatting
- * @param {string} html - Raw HTML string to sanitize
- * @returns {string} Sanitized HTML with preserved formatting
- */
-function sanitizeHtml(html) {
-  const div = document.createElement("div");
-  div.innerHTML = html;
-
-  // Remove ad-related elements
-  const adElements = div.querySelectorAll(
-    '[data-testid^="dfp-slot"], .adunitContainer, .adBox'
-  );
-  adElements.forEach((el) => el.remove());
-
-  // not quite sure how they've done it, but the description has no html markup,
-  // but is still somehow formatted on the property detail page 🤷‍♂️
-  // unfortunately, this means the formatting is not there when we extract it
-  const text = div.innerHTML;
-  return text;
-}
-
-/**
- * Fetches and extracts the Next.js page data and HTML content
- * @param {Object} cardInfo - Property card information
- * @returns {Promise<{html: Element, nextData: Object}>} Both the HTML fragment and parsed Next.js data
- */
-async function fetchPageBody(cardInfo) {
-  if (cardInfo.pageContentNode) {
-    return {
-      html: cardInfo.pageContentNode,
-      nextData: cardInfo.nextData,
-    };
-  }
-
+async function showMap(cardInfo) {
   try {
-    const response = await fetch(cardInfo.href);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch page (${response.status})`);
+    const nextData = await getPropertyNextData(cardInfo);
+    const listing = nextData?.props?.pageProps?.listing;
+
+    if (!listing?.point?.coordinates) {
+      throw new Error("Location coordinates not found");
     }
 
-    const html = await response.text();
+    const [longitude, latitude] = listing.point.coordinates;
+    const address = listing.title;
 
-    // Create HTML fragment
-    const frag = document.createElement("div");
-    frag.innerHTML = html;
+    const dialog = document.createElement("dialog");
+    dialog.className = "df-modal df-map-modal";
 
-    // Extract Next.js data
-    const nextDataScript = frag.querySelector("#__NEXT_DATA__");
-    let nextData = null;
-    if (nextDataScript) {
-      try {
-        nextData = JSON.parse(nextDataScript.textContent);
-      } catch (e) {
-        console.error("Error parsing Next.js data:", e);
+    // Create static map URL with marker
+    const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${
+      longitude - 0.01
+    },${latitude - 0.01},${longitude + 0.01},${
+      latitude + 0.01
+    }&layer=mapnik&marker=${latitude},${longitude}`;
+
+    dialog.innerHTML = `
+      <div class="df-close-wrapper">
+        <button class="df-button df-modal-close">Close</button>
+      </div>
+      <div class="df-map-container">
+        <div class="df-map-contents">
+          <iframe 
+            width="100%" 
+            height="600" 
+            frameborder="0" 
+            scrolling="no" 
+            marginheight="0" 
+            marginwidth="0"
+            src="${mapUrl}">
+          </iframe>
+          <p class="df-map-address">${address}</p>
+          <a href="https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=15/${latitude}/${longitude}" 
+            target="_blank" 
+            class="df-button">
+            View Larger Map
+          </a>
+        </div>
+      </div>
+    `;
+
+    // Add close handler
+    dialog.addEventListener("click", (e) => {
+      if (e.target.closest(".df-modal-close")) {
+        dialog.close();
       }
-    }
+    });
 
-    cardInfo.pageContentNode = frag;
-    cardInfo.nextData = nextData;
+    // Clean up on close
+    dialog.addEventListener("close", () => {
+      dialog.remove();
+    });
 
-    return { html: frag, nextData };
+    // Show dialog
+    document.body.appendChild(dialog);
+    dialog.showModal();
   } catch (error) {
-    console.error("Error fetching property page:", error);
-    throw new Error("Failed to load property page");
-  }
-}
+    console.error("Error showing map:", error);
 
-/**
- * Pulls and formats property details from the Next.js data or page content
- * @param {Object} cardInfo - Property card information
- * @returns {Promise<string>} Formatted HTML string of property details
- */
-async function fetchPropertyDetails(cardInfo) {
-  try {
-    const { nextData } = await fetchPageBody(cardInfo);
-
-    let description = "";
-    let features = [];
-
-    if (nextData?.props?.pageProps?.listing) {
-      const listing = nextData.props.pageProps.listing;
-      description = listing.description || "";
-      features = listing.features || [];
-    }
-
-    if (!description) {
-      throw new Error("Property description not found");
-    }
-
-    // Format the details with features list if available
-    const featuresList =
-      features.length > 0
-        ? `
-     <h3>Features</h3>
-     <ul>
-       ${features.map((f) => `<li>${f}</li>`).join("")}
-     </ul>
-   `
-        : "";
-
-    return `
-     <div class="property-details">
-       <div class="description">${description.replace(/\n/g, "<br>")}</div>
-       ${featuresList}
-     </div>
-   `;
-  } catch (error) {
-    console.error("Error fetching property details:", error);
-    throw new Error("Could not load property details. Please try again later.");
-  }
-}
-
-/**
- * Toggles the visibility of property details
- * @param {Object} cardInfo - Property card information
- * @returns {boolean} Whether the details are now shown
- */
-async function toggleDetails(cardInfo) {
-  let detailsNode = cardInfo.extraDetailsNode;
-
-  if (!detailsNode) {
-    cardInfo.extraDetailsNode = detailsNode = document.createElement("div");
-    detailsNode.className = "df-details-container";
-    cardInfo.controlsNode.appendChild(detailsNode);
-
-    detailsNode.innerHTML =
-      '<div class="loading">Loading property details...</div>';
-
-    try {
-      const content = await fetchPropertyDetails(cardInfo);
-      detailsNode.innerHTML = content;
-    } catch (error) {
-      detailsNode.innerHTML = `<div class="error">${error.message}</div>`;
-    }
-  }
-
-  detailsNode.classList.toggle("shown");
-  return detailsNode.classList.contains("shown");
-}
-
-function extractPageContent(html) {
-  const bodyContent = getBodyContent(html);
-  const frag = document.createElement("div");
-  frag.innerHTML = bodyContent;
-
-  let buyCards = frag.querySelectorAll(".PropertyCardContainer__container");
-  let cards = [];
-  if (buyCards.length > 0) {
-    cards = Array.from(buyCards);
-  } else {
-    let rentCards = frag.querySelectorAll("#sr_content .box");
-    cards = Array.from(rentCards);
-  }
-
-  let scripts = [];
-  cards.forEach((node) => {
-    const scriptNode = node.nextElementSibling;
-
-    // We have to collect the contents of the script tags that follow each
-    // card, as they initialize the image for the card.  Weird how they don't
-    // just output that in the html, but here we are....
-    if (scriptNode.tagName.toLowerCase() === "notscript") {
-      scripts.push(scriptNode.textContent);
-    }
-  });
-
-  return {
-    nodes: cards,
-    scripts: scripts,
-  };
-}
-
-function isSupportedPageType() {
-  return findCards().length > 0;
-}
-
-// When the user saves a note using the Daft native notes tools, also save it
-// locally so we can stay in sync
-function storeNoteFromDaftForm() {
-  const saveButton = document.getElementById("save_note");
-  const textarea = document.querySelector("textarea#modal_note");
-  if (saveButton && textarea) {
-    saveButton.addEventListener(
-      "click",
-      (evt) => {
-        const href = "https://www.daft.ie" + window.location.pathname;
-        saveNotes({ href }, textarea.value.trim(), true);
-      },
-      true
+    // Fallback to old behavior
+    window.open(
+      cardInfo.href + "?df-map-view=1",
+      "df-map",
+      "width=610,height=800,resizable,scrollbars=yes,status=1"
     );
   }
 }
 
+/**
+ * Saves notes for a property in local storage
+ * @param {PropertyCard} cardInfo Property card information
+ * @param {string} textValue Note content to save
+ * @returns {Promise<void>}
+ */
+async function saveNotes(cardInfo, textValue) {
+  // it looks like Daft doesn't allow users to add notes to properties
+  // anymore, so I've removed the step that tries to sync to the note
+  const metadata = getMetadata(cardInfo);
+  metadata.notes = textValue;
+  await writeStorage();
+}
+
+/**
+ * Updates visibility of all property cards based on hide list and stored preferences
+ * @returns {number} Number of hidden cards
+ */
+function hideCards() {
+  const cards = findCards();
+  hiddenCardsCount = 0;
+
+  // Process each card
+  cards.forEach((cardInfo) => {
+    const metadata = getMetadata(cardInfo);
+
+    // Check if card was manually hidden
+    let shouldHide = metadata.hidden === true;
+
+    // If not manually hidden, check if address matches any hide terms
+    if (!shouldHide && cardInfo.address) {
+      shouldHide = globalControls.hideList.some((term) =>
+        cardInfo.address.includes(term.toLowerCase())
+      );
+    }
+
+    // Update count and visibility
+    if (shouldHide) {
+      hiddenCardsCount++;
+    }
+    cardInfo.rootNode.classList.toggle("df-hidden", shouldHide);
+  });
+
+  return hiddenCardsCount;
+}
+
+/**
+ * Adds a mutation observer to detect when new property cards are added
+ * to the page through infinite scroll or filtering.
+ * @returns {void}
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver
+ */
+function addChangeListener() {
+  const resultsContainer = document.querySelector('[data-testid="results"]');
+
+  if (!resultsContainer) {
+    console.warn("Results container not found");
+    return;
+  }
+
+  const observer = new MutationObserver((mutations) => {
+    // Only run initCards if we see nodes being added or removed
+    const hasRelevantChanges = mutations.some(
+      (mutation) =>
+        mutation.type === "childList" &&
+        (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)
+    );
+
+    if (hasRelevantChanges) {
+      initCards();
+    }
+  });
+
+  observer.observe(resultsContainer, {
+    childList: true,
+    subtree: true,
+  });
+}
+
+/**
+ * Initializes controls for all property cards on the page.
+ * Should be called on page load and when new cards are added.
+ * @returns {void}
+ */
+function initCards() {
+  try {
+    const cards = findCards();
+    // Skip if no cards found (might be a different page type)
+    if (cards.length === 0) {
+      return;
+    }
+
+    cards.forEach((cardInfo) => {
+      addCardControls(cardInfo, false);
+    });
+  } catch (error) {
+    console.error("Error initializing property cards:", error);
+  }
+}
+
+/**
+ * Gets or initializes metadata for a property card
+ * @param {PropertyCard} cardInfo Property card information
+ * @returns {PropertyMetadata} The property's metadata
+ */
+function getMetadata(cardInfo) {
+  const key = getStorageKey(cardInfo);
+  if (!propertyMetadata[key]) {
+    propertyMetadata[key] = {
+      hidden: false,
+      notes: "",
+    };
+  }
+  return propertyMetadata[key];
+}
+
+/**
+ * Generates a unique storage key for a property
+ * @param {PropertyCard} cardInfo Property card information
+ * @returns {string} Storage key in format "property:${id}"
+ */
+function getStorageKey(cardInfo) {
+  // Use the ID directly to prevent issues with changing URLs
+  return `property:${cardInfo.id}`;
+}
+
+/**
+ * @typedef {Object} StorageData
+ * @property {Object<string, PropertyMetadata>} properties - Property metadata keyed by ID
+ * @property {Object} globalControls - Global control settings
+ */
+
+/**
+ * Reads property metadata and global controls from chrome.storage.local
+ * @param {PropertyCard[]} cards Array of card information objects
+ * @returns {Promise<void>}
+ */
+async function readStorage(cards) {
+  try {
+    // Create storage keys for each card
+    const propertyKeys = cards.map((card) => getStorageKey(card));
+
+    // Get both properties and global controls in one call
+    const data = await chrome.storage.local.get({
+      properties: {}, // Default empty object if not found
+      "global-controls": {
+        // Default settings if not found
+        hiddenEnabled: true,
+        hideList: [],
+      },
+    });
+
+    // Update global state
+    propertyMetadata = data.properties || {};
+
+    // Update global controls if they exist
+    if (data["global-controls"]) {
+      Object.assign(globalControls, data["global-controls"]);
+    }
+  } catch (error) {
+    console.error("Error reading from storage:", error);
+    throw error; // Re-throw to handle in the calling function
+  }
+}
+
+/**
+ * Writes property metadata and global controls to chrome.storage.local
+ * @returns {Promise<void>}
+ */
+async function writeStorage() {
+  try {
+    // Filter out empty metadata objects
+    const filteredMetadata = {};
+    Object.entries(propertyMetadata).forEach(([key, value]) => {
+      if (Object.keys(value).length > 0) {
+        filteredMetadata[key] = value;
+      }
+    });
+
+    // Prepare data to store
+    const data = {
+      properties: filteredMetadata,
+      "global-controls": globalControls,
+    };
+
+    // Store everything in one call
+    await chrome.storage.local.set(data);
+  } catch (error) {
+    console.error("Error writing to storage:", error);
+    throw error;
+  }
+}
+
+/**
+ * Creates HTML content from property details
+ * @param {Object} listing - Property listing data from Next.js
+ * @returns {string} Formatted HTML content
+ */
+function formatPropertyDetails(listing) {
+  const features = listing.features || [];
+  const featuresList =
+    features.length > 0
+      ? `<h3>Features</h3>
+       <ul>${features.map((f) => `<li>${f}</li>`).join("")}</ul>`
+      : "";
+
+  return `
+    <div class="property-details">
+      <div class="description">${listing.description.replace(
+        /\n/g,
+        "<br>"
+      )}</div>
+      ${featuresList}
+    </div>
+  `;
+}
+
+/**
+ * Checks if the current page is a supported Daft.ie page type
+ * @returns {boolean}
+ */
+function isSupportedPageType() {
+  return findCards().length > 0;
+}
+
+/**
+ * Takes an address string and attempts to extract the place name from it
+ * @param {string} address - Full address string
+ * @returns {string|null} Place name or null if not found
+ */
 function extractPlaceName(address) {
   const possibleNames = address
     .toLowerCase()
@@ -1012,33 +825,38 @@ function extractPlaceName(address) {
     : null;
 }
 
+/**
+ * Initialize extension functionality if we're on a supported page
+ */
 if (isSupportedPageType()) {
-  // sendEvent("lifecycle", "load", getTransactionType());
   readStorage(findCards())
     .then(() => {
       initCards();
       hideCards();
       updateVisibilityState();
-      autoExpandPropertyDescription();
       addChangeListener();
-      prefetchPages();
     })
     .catch((error) => {
-      console.error("Failed to read storage:", error);
+      console.error("Failed to initialize extension:", error);
     });
-} else {
-  storeNoteFromDaftForm();
 }
 
+/**
+ * Handle messages from the popup
+ * @type {chrome.runtime.onMessage}
+ */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "getHiddenCount") {
-    sendResponse({ count: hiddenCardsCount });
-    return true;
-  }
-  if (message.type === "settingsUpdated") {
-    globalControls.hiddenEnabled = message.settings.hiddenEnabled;
-    globalControls.hideList = message.settings.hideList;
-    updateVisibilityState();
-    hideCards();
+  switch (message.type) {
+    case "getHiddenCount":
+      sendResponse({ count: hiddenCardsCount });
+      return true; // Keep message channel open for async response
+
+    case "settingsUpdated":
+      const { hiddenEnabled, hideList } = message.settings;
+      globalControls.hiddenEnabled = hiddenEnabled;
+      globalControls.hideList = hideList;
+      updateVisibilityState();
+      hideCards();
+      break;
   }
 });

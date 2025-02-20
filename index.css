@@ -15,14 +15,25 @@
 }
 
 .df-button {
+  border-radius: 0.25rem;
   cursor: pointer;
-  background: #eff3fa;
-  border: 1px solid #dfdfdf;
-  color: #2b54ab;
-  display: inline-block;
-  font: 400 11px system-ui;
-  padding: 4px 8px;
-  text-decoration: none;
+  transition: background-color 0.5sease-in-out;
+  display: inline-flex;
+  -webkit-box-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  justify-content: center;
+  position: relative;
+  font-weight: 700;
+  font-size: 0.75rem;
+  height: 1rem;
+  padding: 0.25em 0.5em;
+  background: rgb(255, 255, 255);
+  outline: rgb(65, 112, 196) solid 1px;
+  color: rgb(65, 112, 196);
+  text-transform: uppercase;
+  width: fit-content;
+  min-width: 40px;
 }
 
 .df-hidden {
@@ -85,7 +96,7 @@ notscript {
 }
 
 .df-notes-text {
-  max-width: 100%;
+  width: 100%;
 }
 
 /* Property card details */
@@ -234,4 +245,35 @@ dialog.df-modal::backdrop {
   top: 1rem;
   right: 1rem;
   z-index: 2;
+}
+
+/* Map */
+.df-map-modal {
+  width: 90vw;
+  max-width: 800px;
+  height: auto;
+  padding: 1rem;
+}
+
+.df-map-modal::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.df-map-container {
+  margin-top: 1rem;
+  text-align: center;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.df-map-contents {
+  width: 80%;
+}
+
+.df-map-address {
+  margin: 1rem 0;
+  font-size: 1.1em;
+  color: #fff;
 }
