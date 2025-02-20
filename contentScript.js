@@ -1,50 +1,40 @@
+/**
+ * @typedef {Object} PropertyMetadata
+ * @property {boolean} hidden - Whether the property is hidden
+ * @property {string} notes - User notes about the property
+ */
+
+/** @type {Object.<string, PropertyMetadata>} */
 let propertyMetadata = {};
 let hiddenCardsCount = 0;
 
+/** @type {{hiddenEnabled: boolean, hideList: string[]}} */
 const globalControls = {
   hiddenEnabled: true,
   hideList: [],
 };
 
-function refreshUI() {
-  updateHiddenState();
+/**
+ * Updates the visibility state of hidden properties in the UI
+ * @returns {Promise<void}
+ */
+function updateVisibilityState() {
+  document.body.classList[globalControls.hiddenEnabled ? "remove" : "add"](
+    "df-hidden-disabled"
+  );
 }
 
-function insertAfter(newNode, afterNode) {
-  const sibling = afterNode.nextSibling;
-  if (sibling) {
-    afterNode.parentNode.insertBefore(newNode, sibling);
-  } else {
-    afterNode.parentNode.appendChild(newNode);
-  }
-}
-
+/**
+ * Gets whether it is a sale or rent page from the URL.
+ * @returns {string}
+ */
 function getTransactionType() {
   return window.location.href.indexOf("for-sale") > -1 ? "sale" : "rent";
 }
 
 /**
- * Finds and extracts property card information.
- *
- * This function searches the DOM for property listing cards and extracts relevant
- * information using data-testid and data-tracking attributes. It provides
- * a structured way to access property details including address, price, metadata,
- * and navigation elements.
- *
- * @returns {Array<Object>} Array of card objects with the following properties:
- *   @property {string} id - The property ID from the URL/data-testid
- *   @property {string} address - The property's full address text
- *   @property {string} href - The full URL to the property
- *   @property {Object} metadata - Property metadata
- *    @property {number} beds - Number of bedrooms (as integer)
- *    @property {number} baths - Number of bathrooms (as integer)
- *    @property {number} size - Property size in square meters (as integer)
- *    @property {string} type - Property type (e.g., "Detached", "Semi-D")
- *   @property {string} price - The property price text
- *   @property {Element} rootNode - Reference to the main card DOM element
- *   @property {Element} detailsNode - Reference to the details container DOM element
- *   @property {Element} linkNode - Reference to the main card link element
- *   @property {string} transactionType - Either "sale" or "rent" based on URL
+ * Finds and extracts property card information using DOM elements
+ * @returns {Array<PropertyCard>} Array of card objects
  */
 function findCards() {
   // Find all property cards using the consistent data-testid attribute
@@ -52,10 +42,10 @@ function findCards() {
     document.querySelectorAll('[data-testid^="result-"]')
   );
 
-  const transactionType =
-    window.location.href.indexOf("for-sale") > -1 ? "sale" : "rent";
+  const transactionType = getTransactionType();
 
   return cardElements.map((cardElement) => {
+    const id = cardElement.getAttribute("data-testid").split("-")[1];
     const linkNode = cardElement.querySelector("a");
     const detailsContainer = cardElement.querySelector(
       '[data-testid="card-container"]'
@@ -68,41 +58,27 @@ function findCards() {
       '[data-tracking="srp_meta"]'
     );
 
-    // Extract property ID from either the data-testid or URL
-    const id = cardElement.getAttribute("data-testid").split("-")[1];
-
-    // Extract metadata from spans
+    // Basic metadata from DOM - we'll get full data only when needed
     const metadataSpans = Array.from(
       metadataNode?.querySelectorAll("span") || []
     );
-
-    /**
-     *
-     * @param {string} text
-     * @returns {number}
-     */
-    function splitAndConvert(text) {
-      return parseInt(text.split(" ")[0]);
-    }
-
-    const propertyMetadata = {
+    const metadata = {
       beds: 0,
       baths: 0,
       size: 0,
       type: "",
     };
 
-    for (let i = 0; i < metadataSpans.length; i++) {
-      const span = metadataSpans[i];
+    for (const span of metadataSpans) {
       const text = span?.textContent || "";
       if (text.includes("Bed")) {
-        propertyMetadata.beds = splitAndConvert(text);
+        metadata.beds = parseInt(text) || 0;
       } else if (text.includes("Bath")) {
-        propertyMetadata.baths = splitAndConvert(text);
+        metadata.baths = parseInt(text) || 0;
       } else if (text.includes("m²")) {
-        propertyMetadata.size = splitAndConvert(text);
+        metadata.size = parseInt(text) || 0;
       } else {
-        propertyMetadata.type = text;
+        metadata.type = text;
       }
     }
 
@@ -110,49 +86,25 @@ function findCards() {
       id,
       address: addressNode?.textContent?.toLowerCase().trim() || "",
       href: linkNode?.href || "",
-      metadata: propertyMetadata,
+      metadata,
       price: priceNode?.textContent?.trim() || "",
       rootNode: cardElement,
       detailsNode: detailsContainer,
-      linkNode: linkNode,
+      linkNode,
       transactionType,
     };
   });
 }
 
 /**
- * Gets teh ID from the card's href
- * @param {Object} cardInfo - Property card information
- * @returns {string} Property ID
- */
-function getPropertyId(cardInfo) {
-  // Links look like
-  // https://www.daft.ie/cork/houses-for-rent/ballineen/dromidclough-derrigra-ballineen-cork-1892028/
-  // and the id is the last bit.
-  const parts = cardInfo.href.split("-");
-  return parts[parts.length - 1].split("/")[0];
-}
-
-function findParentByClass(node, cls) {
-  while (node && node !== document.body) {
-    if (node.classList.contains(cls)) {
-      return node;
-    }
-    node = node.parentNode;
-  }
-  return null;
-}
-
-/**
- * Adds controls to the bottom of a propery card.
- * @param {Object} cardInfo - Property card information
- * @param {boolean} [force=false] - Whether to force re-adding controls
+ * Adds control buttons and notes container to a property card
+ * @param {PropertyCard} cardInfo Property card information
+ * @param {boolean} [force=false] Whether to force re-adding controls
  * @returns {void}
  */
 function addCardControls(cardInfo, force = false) {
-  // Instead of looking for a sibling, look for existing controls within the card
+  // Check for existing controls within the card
   const existingNode = cardInfo.rootNode.querySelector(".df-controls-wrapper");
-
   if (existingNode) {
     if (force === true) {
       existingNode.remove();
@@ -162,131 +114,140 @@ function addCardControls(cardInfo, force = false) {
   }
 
   const metadata = getMetadata(cardInfo);
-  const areaName = extractPlaceName(cardInfo.address || "");
+  const areaName = extractPlaceName(cardInfo.address);
 
-  let areaNameHideButton = "";
-  if (areaName) {
-    areaNameHideButton = `<button class="df-button df-hide-area">Hide all ${capitalize(
+  // Create controls wrapper
+  const controlsWrapper = document.createElement("div");
+  controlsWrapper.setAttribute("data-df", "controls");
+  controlsWrapper.className = "df-controls-wrapper";
+
+  // Build controls HTML
+  const controls = document.createElement("div");
+  controls.className = "df-card-controls";
+  controls.innerHTML = `
+    <button class="df-button df-hide">${
+      metadata.hidden ? "Unhide" : "Hide"
+    }</button>
+    <button class="df-button df-notes">Notes</button>
+    <button class="df-button df-details">Show Details</button>
+    <button class="df-button df-photos">Show Photos</button>
+    <button class="df-button df-map">Show Map</button>
+    ${
       areaName
-    )}</button>`;
-  }
-
-  const controls = `<div class="df-card-controls">
-      <button class="df-button df-hide">${
-        metadata.hidden ? "Unhide" : "Hide"
-      }</button>
-      <button class="df-button df-notes">Notes</button>
-      <button class="df-button df-details">Show Details</button>
-      <button class="df-button df-photos">Show Photos</button>
-      <button class="df-button df-map">Show Map</button>
-      ${areaNameHideButton}
-     </div>`;
-
-  const frag = document.createElement("div");
-  frag.setAttribute("data-df", "controls");
-  frag.className = "df-controls-wrapper";
-  frag.innerHTML = controls;
+        ? `<button class="df-button df-hide-area">Hide all ${capitalize(
+            areaName
+          )}</button>`
+        : ""
+    }
+  `;
 
   // Create notes container
-  const notesFrag = document.createElement("div");
-  notesFrag.innerHTML = `
-    <div class="df-notes-container${metadata.notes ? " shown" : ""}">
-      <div class="df-notes-inner">
-        <textarea class="df-notes-text${
-          metadata.notes ? " shown" : ""
-        }" rows="3" cols="80" placeholder="Enter notes here">${
-    metadata.notes || ""
-  }</textarea>
-      </div>
-    </div>`;
+  const notesContainer = document.createElement("div");
+  notesContainer.className = `df-notes-container${
+    metadata.notes ? " shown" : ""
+  }`;
+  notesContainer.innerHTML = `
+    <div class="df-notes-inner">
+      <textarea class="df-notes-text" rows="3" 
+        placeholder="Enter notes here">${metadata.notes || ""}</textarea>
+    </div>
+  `;
 
   // Add event listeners
-  frag.querySelector(".df-hide").addEventListener("click", () => {
+  controls.querySelector(".df-hide").addEventListener("click", () => {
     toggleHideCard(cardInfo);
   });
 
-  frag.querySelector(".df-notes").addEventListener("click", () => {
+  controls.querySelector(".df-notes").addEventListener("click", () => {
     toggleNotes(cardInfo);
   });
 
-  frag.querySelector(".df-details").addEventListener("click", (evt) => {
-    const isShown = toggleDetails(cardInfo);
-    evt.target.textContent = isShown ? "Hide Details" : "Show Details";
+  controls.querySelector(".df-details").addEventListener("click", (evt) => {
+    toggleDetails(cardInfo).then((isShown) => {
+      evt.target.textContent = isShown ? "Hide Details" : "Show Details";
+    });
   });
 
-  frag.querySelector(".df-photos").addEventListener("click", () => {
+  controls.querySelector(".df-photos").addEventListener("click", () => {
     showPhotos(cardInfo);
   });
 
-  frag.querySelector(".df-map").addEventListener("click", () => {
+  controls.querySelector(".df-map").addEventListener("click", () => {
     showMap(cardInfo);
   });
 
-  const hideAreaButton = frag.querySelector(".df-hide-area");
-  hideAreaButton &&
+  const hideAreaButton = controls.querySelector(".df-hide-area");
+  if (hideAreaButton && areaName) {
     hideAreaButton.addEventListener("click", () => {
       addToHideAreaList(areaName);
     });
+  }
 
-  notesFrag
+  notesContainer
     .querySelector(".df-notes-text")
     .addEventListener("change", (evt) => {
       saveNotes(cardInfo, evt.target.value);
     });
 
-  // Append controls to the card instead
-  cardInfo.rootNode.appendChild(frag);
+  // Assemble and add to card
+  controlsWrapper.appendChild(controls);
+  controlsWrapper.appendChild(notesContainer);
+  cardInfo.rootNode.appendChild(controlsWrapper);
 
-  // Add notes container to the controls wrapper
-  const notesNode = notesFrag.firstElementChild;
-  frag.appendChild(notesNode);
-
-  cardInfo.notesNode = notesNode;
-  cardInfo.controlsNode = frag;
+  // Store references
+  cardInfo.notesNode = notesContainer;
+  cardInfo.controlsNode = controlsWrapper;
 }
 
 /**
- * Updates the hide list based on user input.
- * @param {Event} evt - The input change event.
- * @returns {void}
+ * Gets Next.js data for a property, fetching only once if needed
+ * @param {PropertyCard} cardInfo Property card information
+ * @returns {Promise<Object>} The property's Next.js data
  */
-function updateHideList(evt) {
-  const hideList = evt.target.value;
-  const tokens = hideList.split(",").map((item) => item.trim().toLowerCase());
+async function getPropertyNextData(cardInfo) {
+  // Return cached data if we already fetched it
+  if (cardInfo.nextData) {
+    return cardInfo.nextData;
+  }
 
-  globalControls.hideList = tokens;
-  writeStorage();
+  try {
+    const response = await fetch(cardInfo.href);
+    const html = await response.text();
+
+    // Extract Next.js data script
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const nextDataScript = doc.querySelector("#__NEXT_DATA__");
+
+    if (!nextDataScript) {
+      throw new Error("Next.js data not found");
+    }
+
+    // Parse and cache the data
+    cardInfo.nextData = JSON.parse(nextDataScript.textContent);
+    return cardInfo.nextData;
+  } catch (error) {
+    console.error("Error fetching property data:", error);
+    throw error;
+  }
 }
 
 /**
- * Adds all areas with a certain name to the hide list.
- * @param {string} areaName - The area name to add to the hide list.
- * @returns {void}
+ * Adds an area name to the global hide list
+ * @param {string} areaName Name of the area to hide
  */
-function addToHideAreaList(areaName) {
+async function addToHideAreaList(areaName) {
   areaName = areaName.toLowerCase();
   if (!globalControls.hideList.some((area) => area === areaName)) {
     globalControls.hideList.push(areaName);
-    document.querySelector("#df-hide-input").value =
-      globalControls.hideList.join(",");
-    writeStorage();
+    await writeStorage();
     hideCards();
   }
 }
 
 /**
- * Hides/Shows the cards that have been marked as hidden.
- * @returns {void}
- */
-function updateHiddenState() {
-  document.body.classList[globalControls.hiddenEnabled ? "remove" : "add"](
-    "df-hidden-disabled"
-  );
-}
-
-/**
  * Toggles a card's hidden state.
- * @param {Object} cardInfo - Property card information
+ * @param {PropertyCard} cardInfo Property card information
  * @returns {void}
  */
 function toggleHideCard(cardInfo) {
@@ -294,13 +255,13 @@ function toggleHideCard(cardInfo) {
   metadata.hidden = !metadata.hidden;
   hideCards();
   writeStorage();
-  refreshUI();
+  updateVisibilityState();
   addCardControls(cardInfo, true);
 }
 
 /**
- * Toggles the visibility of a card's note input.
- * @param {Object} cardInfo - Property card information
+ * Toggles visibility of the notes textarea
+ * @param {PropertyCard} cardInfo Property card information
  * @returns {void}
  */
 function toggleNotes(cardInfo) {
@@ -311,29 +272,51 @@ function toggleNotes(cardInfo) {
 /**
  * Toggles the visibility of a property's description, which is
  * scraped from the property page.
- * @param {Object} cardInfo - Property card information
+ * @param {PropertyCard} cardInfo Property card information
  * @returns {boolean} Whether the details are now shown
  */
 async function toggleDetails(cardInfo) {
   let detailsNode = cardInfo.extraDetailsNode;
 
   if (!detailsNode) {
-    // sendEvent("action", "show_details");
     cardInfo.extraDetailsNode = detailsNode = document.createElement("div");
-    detailsNode.innerHTML = "Loading ...";
     detailsNode.className = "df-details-container";
-    cardInfo.controlsNode.appendChild(cardInfo.extraDetailsNode);
+    cardInfo.controlsNode.appendChild(detailsNode);
+
+    detailsNode.innerHTML =
+      '<div class="loading">Loading property details...</div>';
 
     try {
-      const content = await fetchPropertyDetails(cardInfo);
-      detailsNode.innerHTML = content;
+      const nextData = await getPropertyNextData(cardInfo);
+      const listing = nextData?.props?.pageProps?.listing;
+
+      if (!listing?.description) {
+        throw new Error("Property description not found");
+      }
+
+      const features = listing.features || [];
+      const featuresList =
+        features.length > 0
+          ? `<h3>Features</h3>
+           <ul>${features.map((f) => `<li>${f}</li>`).join("")}</ul>`
+          : "";
+
+      detailsNode.innerHTML = `
+        <div class="property-details">
+          <div class="description">${listing.description.replace(
+            /\n/g,
+            "<br>"
+          )}</div>
+          ${featuresList}
+        </div>
+      `;
     } catch (error) {
-      detailsNode.innerHTML = error.message;
+      detailsNode.innerHTML = `<div class="error">${error.message}</div>`;
     }
   }
 
-  cardInfo.extraDetailsNode.classList.toggle("shown");
-  return cardInfo.extraDetailsNode.classList.contains("shown");
+  detailsNode.classList.toggle("shown");
+  return detailsNode.classList.contains("shown");
 }
 
 function capitalize(str) {
@@ -1035,7 +1018,7 @@ if (isSupportedPageType()) {
     .then(() => {
       initCards();
       hideCards();
-      refreshUI();
+      updateVisibilityState();
       autoExpandPropertyDescription();
       addChangeListener();
       prefetchPages();
@@ -1055,7 +1038,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "settingsUpdated") {
     globalControls.hiddenEnabled = message.settings.hiddenEnabled;
     globalControls.hideList = message.settings.hideList;
-    updateHiddenState();
+    updateVisibilityState();
     hideCards();
   }
 });
