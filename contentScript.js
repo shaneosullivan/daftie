@@ -120,6 +120,11 @@ function findCards() {
   });
 }
 
+/**
+ * Gets teh ID from the card's href
+ * @param {Object} cardInfo - Property card information
+ * @returns {string} Property ID
+ */
 function getPropertyId(cardInfo) {
   // Links look like
   // https://www.daft.ie/cork/houses-for-rent/ballineen/dromidclough-derrigra-ballineen-cork-1892028/
@@ -138,7 +143,13 @@ function findParentByClass(node, cls) {
   return null;
 }
 
-function addCardControls(cardInfo, force) {
+/**
+ * Adds controls to the bottom of a propery card.
+ * @param {Object} cardInfo - Property card information
+ * @param {boolean} [force=false] - Whether to force re-adding controls
+ * @returns {void}
+ */
+function addCardControls(cardInfo, force = false) {
   // Instead of looking for a sibling, look for existing controls within the card
   const existingNode = cardInfo.rootNode.querySelector(".df-controls-wrapper");
 
@@ -234,6 +245,11 @@ function addCardControls(cardInfo, force) {
   cardInfo.controlsNode = frag;
 }
 
+/**
+ * Updates the hide list based on user input.
+ * @param {Event} evt - The input change event.
+ * @returns {void}
+ */
 function updateHideList(evt) {
   const hideList = evt.target.value;
   const tokens = hideList.split(",").map((item) => item.trim().toLowerCase());
@@ -242,6 +258,11 @@ function updateHideList(evt) {
   writeStorage();
 }
 
+/**
+ * Adds all areas with a certain name to the hide list.
+ * @param {string} areaName - The area name to add to the hide list.
+ * @returns {void}
+ */
 function addToHideAreaList(areaName) {
   areaName = areaName.toLowerCase();
   if (!globalControls.hideList.some((area) => area === areaName)) {
@@ -253,12 +274,21 @@ function addToHideAreaList(areaName) {
   }
 }
 
+/**
+ * Hides/Shows the cards that have been marked as hidden.
+ * @returns {void}
+ */
 function updateHiddenState() {
   document.body.classList[globalControls.hiddenEnabled ? "remove" : "add"](
     "df-hidden-disabled"
   );
 }
 
+/**
+ * Toggles a card's hidden state.
+ * @param {Object} cardInfo - Property card information
+ * @returns {void}
+ */
 function toggleHideCard(cardInfo) {
   const metadata = getMetadata(cardInfo);
   metadata.hidden = !metadata.hidden;
@@ -268,11 +298,22 @@ function toggleHideCard(cardInfo) {
   addCardControls(cardInfo, true);
 }
 
+/**
+ * Toggles the visibility of a card's note input.
+ * @param {Object} cardInfo - Property card information
+ * @returns {void}
+ */
 function toggleNotes(cardInfo) {
   const notesNode = cardInfo.notesNode;
   notesNode.classList.toggle("shown");
 }
 
+/**
+ * Toggles the visibility of a property's description, which is
+ * scraped from the property page.
+ * @param {Object} cardInfo - Property card information
+ * @returns {boolean} Whether the details are now shown
+ */
 async function toggleDetails(cardInfo) {
   let detailsNode = cardInfo.extraDetailsNode;
 
@@ -304,16 +345,21 @@ function capitalize(str) {
     : "";
 }
 
+/**
+ * Fetches and displays the property photos in a modal dialog.
+ * @param {Object} cardInfo - Property card information
+ * @returns {void}
+ */
 function showPhotos(cardInfo) {
   fetchPageBody(cardInfo).then((frag) => {
     // Find list of photo images from the HTML for the carousel in the page.
     const urls = Array.from(
-      frag.querySelectorAll("#pbxl_photo_carousel ul li img")
+      frag.querySelectorAll(".image-gallery-thumbnail-image")
     ).map((img) => img.src);
 
     // sendEvent("action", "show_photos", null, urls.length);
     if (urls.length > 0) {
-      const modal = document.createElement("div");
+      const modal = document.createElement("dialog");
       modal.className = "df-modal";
 
       function goForward() {
