@@ -346,130 +346,160 @@ function capitalize(str) {
 }
 
 /**
- * Fetches and displays the property photos in a modal dialog.
+ * Shows property photos in a modal dialog with carousel
  * @param {Object} cardInfo - Property card information
- * @returns {void}
  */
-function showPhotos(cardInfo) {
-  fetchPageBody(cardInfo).then((frag) => {
-    // Find list of photo images from the HTML for the carousel in the page.
-    const urls = Array.from(
-      frag.querySelectorAll(".image-gallery-thumbnail-image")
-    ).map((img) => img.src);
+async function showPhotos(cardInfo) {
+  try {
+    const { nextData } = await fetchPageBody(cardInfo);
 
-    // sendEvent("action", "show_photos", null, urls.length);
+    let urls = [];
+    if (nextData?.props?.pageProps?.listing?.media?.images) {
+      urls = nextData.props.pageProps.listing.media.images
+        .map((img) => ({
+          full: img.size1200x1200,
+          thumb: img.size360x240,
+        }))
+        .filter((urls) => urls.full && urls.thumb);
+    }
+
     if (urls.length > 0) {
-      const modal = document.createElement("dialog");
-      modal.className = "df-modal";
+      const dialog = document.createElement("dialog");
+      dialog.className = "df-modal";
 
-      function goForward() {
-        const currentScroll = modal.scrollTop;
-
-        // Find the first image whose offset from the top is more than the
-        // current scroll top
-        const nodes = Array.from(modal.querySelectorAll(".df-img-wrapper"));
-
-        if (nodes.length > 1) {
-          const topPadding = nodes[0].offsetTop;
-          nodes.some((node, idx) => {
-            if (node.offsetTop > currentScroll + topPadding) {
-              modal.scrollTop = node.offsetTop - 40;
-              return true;
-            }
-            return false;
-          });
-        }
-      }
-
-      function goBack() {
-        const currentScroll = modal.scrollTop;
-
-        // Find the last image whose offset from the top is less than the
-        // current scroll top
-        const nodes = Array.from(modal.querySelectorAll(".df-img-wrapper"));
-        for (let i = nodes.length - 1; i > -1; i--) {
-          const node = nodes[i];
-          if (node.offsetTop < currentScroll) {
-            modal.scrollTop = node.offsetTop - 40;
-            return;
-          }
-        }
-      }
-
-      function keyListener(evt) {
-        const keyCode = evt.keyCode;
-        let prevent = false;
-
-        // ESC key
-        if (keyCode === 27) {
-          removeModal();
-        } else if (keyCode === 37 || keyCode === 38) {
-          // LEFT and UP keys
-          goBack();
-          prevent = true;
-        } else if (keyCode === 39 || keyCode === 40) {
-          // RIGHT and DOWN keys
-          goForward();
-          prevent = true;
-        }
-
-        if (prevent) {
-          evt.preventDefault();
-          evt.stopPropagation();
-        }
-      }
-
-      function removeModal() {
-        modal.parentNode.removeChild(modal);
-        document.body.removeEventListener("keydown", keyListener, false);
-      }
-
-      function unhideImage(evt) {
-        evt.target.classList.add("unhidden");
-      }
-
-      document.body.addEventListener("keydown", keyListener, false);
-
-      const images = urls.map((url) => {
-        const img = document.createElement("img");
-        img.src = url;
-        img.className = "df-img";
-
-        img.addEventListener("load", unhideImage);
-        return img;
-      });
-
-      const closeContainer = `
+      // Create carousel HTML
+      dialog.innerHTML = `
         <div class="df-close-wrapper">
-          <button class="df-button df-modal-close">
-            Close
-          </button>
+          <button class="df-button df-modal-close">Close</button>
+        </div>
+        <div class="df-carousel">
+          <div class="df-carousel__main">
+            <button class="df-carousel__button" type="button" aria-label="Previous photo" id="prevButton">
+              <svg class="df-carousel__arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
+            </button>
+            <ul class="df-carousel__slides">
+              ${urls
+                .map(
+                  (url, idx) => `
+                <li class="df-carousel__slide df-carousel__slide--main ${
+                  idx === 0 ? "df-carousel__slide--visible" : ""
+                }">
+                  <img 
+                    class="df-carousel__img" 
+                    src="${url.full}"
+                    data-imgid="${idx}"
+                    loading="${idx < 2 ? "eager" : "lazy"}"
+                    alt="Property photo ${idx + 1}"
+                  >
+                </li>
+              `
+                )
+                .join("")}
+            </ul>
+            <button class="df-carousel__button" type="button" aria-label="Next photo" id="nextButton">
+              <svg class="df-carousel__arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="df-carousel__thumbnails">
+            <ul class="df-carousel__slides df-carousel__slides--thumbnails">
+              ${urls
+                .map(
+                  (url, idx) => `
+                <li class="df-carousel__slide df-carousel__slide--thumbnail ${
+                  idx === 0 ? "df-carousel__slide--visible" : ""
+                }">
+                  <img 
+                    class="df-carousel__img" 
+                    src="${url.thumb}"
+                    data-imgid="${idx}"
+                    alt="Thumbnail ${idx + 1}"
+                  >
+                </li>
+              `
+                )
+                .join("")}
+            </ul>
+          </div>
         </div>
       `;
 
-      modal.innerHTML = closeContainer;
-
-      images.forEach((img) => {
-        const div = document.createElement("div");
-        div.appendChild(img);
-        div.className = "df-img-wrapper";
-
-        modal.appendChild(div);
-      });
-
-      modal.addEventListener(
-        "click",
-        (evt) => {
-          if (evt.target.tagName !== "IMG") {
-            removeModal();
-          }
-        },
-        false
+      let currentIdx = 0;
+      const slides = dialog.querySelectorAll(".df-carousel__slide--main");
+      const thumbnails = dialog.querySelectorAll(
+        ".df-carousel__slide--thumbnail"
       );
 
-      document.body.appendChild(modal);
+      function changeSlide(oldIdx, newIdx) {
+        // Update visibility
+        slides[newIdx].classList.add("df-carousel__slide--visible");
+        thumbnails[newIdx].classList.add("df-carousel__slide--visible");
+
+        slides[oldIdx].classList.remove("df-carousel__slide--visible");
+        thumbnails[oldIdx].classList.remove("df-carousel__slide--visible");
+
+        currentIdx = newIdx;
+      }
+
+      // Event handlers
+      function handleNext() {
+        const newIdx = currentIdx < slides.length - 1 ? currentIdx + 1 : 0;
+        changeSlide(currentIdx, newIdx);
+      }
+
+      function handlePrev() {
+        const newIdx = currentIdx > 0 ? currentIdx - 1 : slides.length - 1;
+        changeSlide(currentIdx, newIdx);
+      }
+
+      function handleThumbnailClick(e) {
+        const imgId = e.target.dataset.imgid;
+        if (imgId !== undefined) {
+          const newIdx = parseInt(imgId, 10);
+          if (newIdx !== currentIdx) {
+            changeSlide(currentIdx, newIdx);
+          }
+        }
+      }
+
+      // Add event listeners
+      dialog.querySelector("#nextButton").addEventListener("click", handleNext);
+      dialog.querySelector("#prevButton").addEventListener("click", handlePrev);
+      dialog
+        .querySelector(".df-carousel__slides--thumbnails")
+        .addEventListener("click", handleThumbnailClick);
+
+      dialog.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          handleNext();
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          handlePrev();
+        }
+      });
+
+      dialog.addEventListener("click", (e) => {
+        if (e.target.closest(".df-modal-close")) {
+          dialog.close();
+        }
+      });
+
+      // Clean up
+      dialog.addEventListener("close", () => {
+        dialog.remove();
+      });
+
+      // Show dialog
+      document.body.appendChild(dialog);
+      dialog.showModal();
     }
-  });
+  } catch (error) {
+    console.error("Error showing photos:", error);
+  }
 }
 
 function showMap(cardInfo) {
@@ -816,15 +846,16 @@ function sanitizeHtml(html) {
 }
 
 /**
- * Fetches and caches the property page content
+ * Fetches and extracts the Next.js page data and HTML content
  * @param {Object} cardInfo - Property card information
- * @param {string} cardInfo.href - URL of the property page
- * @param {Element} [cardInfo.pageContentNode] - Cached page content if available
- * @returns {Promise<Element>} Document fragment containing the page content
+ * @returns {Promise<{html: Element, nextData: Object}>} Both the HTML fragment and parsed Next.js data
  */
 async function fetchPageBody(cardInfo) {
   if (cardInfo.pageContentNode) {
-    return cardInfo.pageContentNode;
+    return {
+      html: cardInfo.pageContentNode,
+      nextData: cardInfo.nextData,
+    };
   }
 
   try {
@@ -834,11 +865,26 @@ async function fetchPageBody(cardInfo) {
     }
 
     const html = await response.text();
+
+    // Create HTML fragment
     const frag = document.createElement("div");
     frag.innerHTML = html;
 
+    // Extract Next.js data
+    const nextDataScript = frag.querySelector("#__NEXT_DATA__");
+    let nextData = null;
+    if (nextDataScript) {
+      try {
+        nextData = JSON.parse(nextDataScript.textContent);
+      } catch (e) {
+        console.error("Error parsing Next.js data:", e);
+      }
+    }
+
     cardInfo.pageContentNode = frag;
-    return frag;
+    cardInfo.nextData = nextData;
+
+    return { html: frag, nextData };
   } catch (error) {
     console.error("Error fetching property page:", error);
     throw new Error("Failed to load property page");
@@ -846,36 +892,44 @@ async function fetchPageBody(cardInfo) {
 }
 
 /**
- * Extracts and formats property details from the property page
+ * Pulls and formats property details from the Next.js data or page content
  * @param {Object} cardInfo - Property card information
  * @returns {Promise<string>} Formatted HTML string of property details
  */
 async function fetchPropertyDetails(cardInfo) {
   try {
-    const frag = await fetchPageBody(cardInfo);
+    const { nextData } = await fetchPageBody(cardInfo);
 
-    let descriptionText = "";
-    const mainDescription = frag.querySelector('[data-testid="description"]');
+    let description = "";
+    let features = [];
 
-    if (mainDescription) {
-      // Try to get nested description first
-      const nestedDescription = mainDescription.querySelector(
-        '[data-testid="description"]'
-      );
-      if (nestedDescription) {
-        descriptionText = sanitizeHtml(nestedDescription.innerHTML);
-      } else {
-        // If no nested description, use main description
-        descriptionText = sanitizeHtml(mainDescription.innerHTML);
-      }
+    if (nextData?.props?.pageProps?.listing) {
+      const listing = nextData.props.pageProps.listing;
+      description = listing.description || "";
+      features = listing.features || [];
     }
 
-    if (!descriptionText.trim()) {
+    if (!description) {
       throw new Error("Property description not found");
     }
 
-    // Wrap in a div with proper styling
-    return `<div class="property-details">${descriptionText}</div>`;
+    // Format the details with features list if available
+    const featuresList =
+      features.length > 0
+        ? `
+     <h3>Features</h3>
+     <ul>
+       ${features.map((f) => `<li>${f}</li>`).join("")}
+     </ul>
+   `
+        : "";
+
+    return `
+     <div class="property-details">
+       <div class="description">${description.replace(/\n/g, "<br>")}</div>
+       ${featuresList}
+     </div>
+   `;
   } catch (error) {
     console.error("Error fetching property details:", error);
     throw new Error("Could not load property details. Please try again later.");
