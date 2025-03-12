@@ -547,7 +547,7 @@ async function showMap(cardInfo) {
             src="${mapUrl}">
           </iframe>
           <p class="df-map-address">${address}</p>
-          <a href="https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=15/${latitude}/${longitude}" 
+          <a href="https://www.google.com/maps?q=${latitude},${longitude}"
             target="_blank" 
             class="df-button">
             View Larger Map

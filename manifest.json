@@ -9,6 +9,11 @@
     "default_popup": "popup.html",
     "default_title": "Dafty Settings"
   },
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  },
   "content_scripts": [
     {
       "matches": ["https://daft.ie/*", "https://www.daft.ie/*"],
