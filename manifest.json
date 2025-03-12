@@ -1,18 +1,19 @@
 {
   "name": "Dafty",
-  "version": "1.6",
-  "description": "Unoffical improvements for Daft.ie",
-  "manifest_version": 2,
-  "permissions": [
-    "activeTab",
-    "storage",
-    "https://www.google-analytics.com/collect*"
-  ],
+  "version": "2.0",
+  "description": "Unofficial improvements for Daft.ie",
+  "manifest_version": 3,
+  "permissions": ["storage"],
+  "host_permissions": ["https://daft.ie/*", "https://www.daft.ie/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Dafty Settings"
+  },
   "content_scripts": [
     {
       "matches": ["https://daft.ie/*", "https://www.daft.ie/*"],
       "css": ["index.css"],
-      "js": ["analytics.js", "contentScript.js"]
+      "js": ["contentScript.js"]
     },
     {
       "matches": [

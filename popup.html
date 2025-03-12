@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Dafty Settings</title>
+  <link href="popup.css" rel="stylesheet">
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Dafty Settings</h1>
+    </div>
+
+    <div class="settings-group">
+      <div class="hidden-controls">
+        <span>Hidden Properties</span>
+        <button id="toggleHidden" class="button">
+          <span id="toggleHiddenText">Loading...</span>
+        </button>
+      </div>
+
+      <div class="hide-list-controls">
+        <label for="hideList">Hide Matching Terms</label>
+        <input type="text" id="hideList" placeholder="Enter comma-separated terms">
+        <p class="help-text">
+          Properties matching these terms will be hidden. Separate multiple terms with commas.
+        </p>
+      </div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+
+</html>
