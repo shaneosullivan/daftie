@@ -1,50 +1,73 @@
-body {
-  width: 320px;
-  margin: 0;
-  padding: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+/* Reset some basic styling */
+* {
+  box-sizing: border-box;
 }
 
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Roboto", system-ui, -apple-system, sans-serif;
+  background-color: #f7f9fc;
+}
+
+/* Container dimensions for the extension popup */
 .container {
+  width: 320px;
   padding: 16px;
 }
 
+/* Card style for a modern look */
+.card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+}
+
+/* Header styling */
 .header {
+  border-bottom: 1px solid #e0e0e0;
   margin-bottom: 16px;
+  padding-bottom: 8px;
 }
 
 .header h1 {
-  font-size: 18px;
+  font-size: 20px;
   margin: 0;
   color: #333;
 }
 
+/* Layout for settings groups */
 .settings-group {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
+/* Controls for hidden properties */
 .hidden-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
+/* Modern button styling */
 .button {
-  background-color: #eff3fa;
-  border: 1px solid #dfdfdf;
-  color: #2b54ab;
+  background-color: #4a90e2;
+  border: none;
+  color: #fff;
   padding: 8px 16px;
   cursor: pointer;
   border-radius: 4px;
   font-size: 14px;
+  transition: background-color 0.3s ease;
 }
 
 .button:hover {
-  background-color: #e4eaf7;
+  background-color: #357ab8;
 }
 
+/* Input and label styling */
 .hide-list-controls {
   display: flex;
   flex-direction: column;
@@ -58,11 +81,18 @@ body {
 
 .hide-list-controls input {
   padding: 8px;
-  border: 1px solid #dfdfdf;
+  border: 1px solid #d0d0d0;
   border-radius: 4px;
   font-size: 14px;
+  transition: border-color 0.3s ease;
 }
 
+.hide-list-controls input:focus {
+  border-color: #4a90e2;
+  outline: none;
+}
+
+/* Help text styling */
 .help-text {
   font-size: 12px;
   color: #666;

@@ -1,36 +1,46 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dafty Settings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Using a modern Google Font -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link href="popup.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="card">
+        <header class="header">
+          <h1>Dafty Settings</h1>
+        </header>
 
-<head>
-  <meta charset="UTF-8">
-  <title>Dafty Settings</title>
-  <link href="popup.css" rel="stylesheet">
-</head>
+        <div class="settings-group">
+          <div class="hidden-controls">
+            <span>Hidden Properties</span>
+            <button id="toggleHidden" class="button">
+              <span id="toggleHiddenText">Loading...</span>
+            </button>
+          </div>
 
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>Dafty Settings</h1>
-    </div>
-
-    <div class="settings-group">
-      <div class="hidden-controls">
-        <span>Hidden Properties</span>
-        <button id="toggleHidden" class="button">
-          <span id="toggleHiddenText">Loading...</span>
-        </button>
+          <div class="hide-list-controls">
+            <label for="hideList">Hide Matching Terms</label>
+            <input
+              type="text"
+              id="hideList"
+              placeholder="Enter comma-separated terms"
+            />
+            <p class="help-text">
+              Properties matching these terms will be hidden. Separate multiple
+              terms with commas.
+            </p>
+          </div>
+        </div>
       </div>
-
-      <div class="hide-list-controls">
-        <label for="hideList">Hide Matching Terms</label>
-        <input type="text" id="hideList" placeholder="Enter comma-separated terms">
-        <p class="help-text">
-          Properties matching these terms will be hidden. Separate multiple terms with commas.
-        </p>
-      </div>
     </div>
-  </div>
-  <script src="popup.js"></script>
-</body>
-
+    <script src="popup.js"></script>
+  </body>
 </html>
